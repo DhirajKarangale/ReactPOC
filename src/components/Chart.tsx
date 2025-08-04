@@ -1,49 +1,53 @@
-import { Pie } from 'react-chartjs-2';
-import { Chart as ChartJS, ArcElement, Tooltip, Legend, type ChartOptions } from 'chart.js';
+"use client"
 
-ChartJS.register(ArcElement, Tooltip, Legend);
+import { Pie, PieChart } from "recharts"
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 
 interface ChartProps {
-    title?: string;
+    title: string;
 }
 
+const chartData = [
+    { browser: "A", data: 275, fill: "#93C5FD" },
+    { browser: "B", data: 200, fill: "#60A5FA" },
+    { browser: "C", data: 187, fill: "#3B82F6" },
+    { browser: "D", data: 173, fill: "#2563EB" },
+    { browser: "E", data: 90, fill: "#1D4ED8" },
+];
+
 function Chart({ title }: ChartProps) {
-    const chartData = {
-        labels: ['Data1', 'Data2', 'Data3', 'Data4', 'Data5'],
-        datasets: [
-            {
-                data: Array.from({ length: 5 }, () => Math.floor(Math.random() * 100) + 10),
-                backgroundColor: ['#60a5fa', '#f87171', '#34d399', '#fbbf24', '#a78bfa'],
-                borderWidth: 1,
-            },
-        ],
-    };
-
-    const options: ChartOptions<'pie'> = {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: {
-                position: 'bottom',
-            },
-            title: {
-                display: true,
-                text: title || 'Chart Title',
-                font: {
-                    size: 16,
-                    weight: 'bold',
-                },
-            },
-        },
-    };
-
     return (
-        <div className="w-full h-full bg-white rounded-lg shadow-md p-4 flex items-center justify-center">
-            <div className="w-full h-full">
-                <Pie data={chartData} options={options} />
-            </div>
-        </div>
+        <Card className="flex flex-col chart-snapshot">
+            <CardHeader className="items-center pb-0">
+                <CardTitle>{title}</CardTitle>
+            </CardHeader>
+
+            <CardContent className="flex-1 pb-0">
+                <ChartContainer
+                    config={{}}
+                    className="mx-auto aspect-square max-h-[250px]"
+                >
+                    <PieChart>
+                        <ChartTooltip
+                            cursor={false}
+                            content={<ChartTooltipContent hideLabel />}
+                        />
+                        <Pie
+                            data={chartData}
+                            dataKey="data"
+                            nameKey="browser"
+                            cx="50%"
+                            cy="50%"
+                            outerRadius="80%"
+                            label
+                        />
+                    </PieChart>
+                </ChartContainer>
+            </CardContent>
+        </Card>
     );
-};
+}
 
 export default Chart;

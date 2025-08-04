@@ -67,8 +67,7 @@ const PdfDownloader: React.FC<PdfDownloadModalProps> = ({ isOpen, onClose, conte
     //     }
     // }
 
-
-    const handleDownload = async () => {
+    async function handleDownload() {
         if (!contentRef.current) return;
 
         try {
@@ -206,8 +205,8 @@ const PdfDownloader: React.FC<PdfDownloadModalProps> = ({ isOpen, onClose, conte
     if (!isOpen || !contentRef || !contentRef.current) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/10">
-            <div className="bg-white/10 w-full h-full sm:w-[80%] sm:h-[90%] rounded-lg overflow-hidden shadow-lg flex flex-col">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="bg-white w-full h-full sm:w-[80%] sm:h-[90%] rounded-lg overflow-hidden shadow-lg flex flex-col">
                 <div className="p-4 border-b relative flex items-center justify-between">
                     <h2 className="text-xl font-bold">Preview</h2>
                     <div className="absolute left-1/2 -translate-x-1/2">
