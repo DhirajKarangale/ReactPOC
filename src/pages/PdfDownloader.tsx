@@ -19,14 +19,105 @@ const PdfDownloader: React.FC<PdfDownloadModalProps> = ({ isOpen, onClose, conte
         backgroundColor: bgColor,
     };
 
-    async function handleDownload() {
+    // async function handleDownload() {
+    //     if (!contentRef.current) return;
+
+    //     const noPrintElements = contentRef.current.querySelectorAll(".no-print");
+    //     noPrintElements.forEach((el) => ((el as HTMLElement).style.opacity = "0"));
+
+    //     try {
+    //         const dataUrl = await toPng(contentRef.current, IMAGE_OPTIONS);
+
+    //         const pdf = new jsPDF({
+    //             orientation: "portrait",
+    //             unit: "px",
+    //             format: "a4",
+    //         });
+
+    //         const currentTitle = title;
+    //         const pageWidth = pdf.internal.pageSize.getWidth();
+    //         const pageHeight = pdf.internal.pageSize.getHeight();
+
+    //         pdf.setFillColor(bgColor);
+    //         pdf.rect(0, 0, pageWidth, pageHeight, "F");
+
+    //         const img = new Image();
+    //         img.src = dataUrl;
+
+    //         img.onload = () => {
+    //             const ratio = Math.min(pageWidth / img.width, pageHeight / img.height);
+    //             const scaledWidth = img.width * ratio;
+    //             const scaledHeight = img.height * ratio;
+    //             const x = (pageWidth - scaledWidth) / 2;
+    //             const y = 50;
+
+    //             pdf.setTextColor(0, 0, 0);
+    //             pdf.setFont("helvetica", "bold");
+    //             pdf.setFontSize(20);
+    //             pdf.text(currentTitle, pageWidth / 2, 30, { align: "center" });
+
+    //             pdf.addImage(dataUrl, "PNG", x, y, scaledWidth, scaledHeight);
+    //             pdf.save("dashboard.pdf");
+    //         };
+    //     } catch (err) {
+    //         console.error("Error generating PDF", err);
+    //     } finally {
+    //         noPrintElements.forEach((el) => ((el as HTMLElement).style.opacity = ""));
+    //         onClose();
+    //     }
+    // }
+
+
+    const handleDownload = async () => {
         if (!contentRef.current) return;
 
-        const noPrintElements = contentRef.current.querySelectorAll(".no-print");
-        noPrintElements.forEach((el) => ((el as HTMLElement).style.opacity = "0"));
-
         try {
-            const dataUrl = await toPng(contentRef.current, IMAGE_OPTIONS);
+            const originalNode = contentRef.current;
+            const clone = originalNode.cloneNode(true) as HTMLElement;
+
+            clone.querySelectorAll(".no-print").forEach((el) => el.remove());
+
+            const originalCharts = originalNode.querySelectorAll(".chart-snapshot");
+            const clonedCharts = clone.querySelectorAll(".chart-snapshot");
+
+            await Promise.all(
+                Array.from(originalCharts).map(async (chartEl, i) => {
+                    const cloneEl = clonedCharts[i] as HTMLElement;
+
+                    try {
+                        const dataUrl = await toPng(chartEl as HTMLElement, { cacheBust: true });
+
+                        const img = new Image();
+                        img.src = dataUrl;
+                        img.style.width = "100%";
+                        img.style.borderRadius = "inherit";
+                        img.style.boxShadow = "inherit";
+
+                        await img.decode();
+
+                        cloneEl.innerHTML = "";
+                        cloneEl.appendChild(img);
+                    } catch (err) {
+                        console.warn("Failed to render chart image", err);
+                    }
+                })
+            );
+
+            const hiddenWrapper = document.createElement("div");
+            hiddenWrapper.style.position = "fixed";
+            hiddenWrapper.style.top = "-10000px";
+            hiddenWrapper.style.left = "-10000px";
+            hiddenWrapper.style.zIndex = "-999";
+            hiddenWrapper.style.pointerEvents = "none";
+            hiddenWrapper.appendChild(clone);
+            document.body.appendChild(hiddenWrapper);
+
+            const finalDataUrl = await toPng(clone, {
+                backgroundColor: "#ffffff",
+                cacheBust: true,
+            });
+
+            document.body.removeChild(hiddenWrapper);
 
             const pdf = new jsPDF({
                 orientation: "portrait",
@@ -34,38 +125,39 @@ const PdfDownloader: React.FC<PdfDownloadModalProps> = ({ isOpen, onClose, conte
                 format: "a4",
             });
 
-            const currentTitle = title;
-            const pageWidth = pdf.internal.pageSize.getWidth();
-            const pageHeight = pdf.internal.pageSize.getHeight();
-
-            pdf.setFillColor(bgColor);
-            pdf.rect(0, 0, pageWidth, pageHeight, "F");
-
             const img = new Image();
-            img.src = dataUrl;
+            img.src = finalDataUrl;
 
             img.onload = () => {
+                const pageWidth = pdf.internal.pageSize.getWidth();
+                const pageHeight = pdf.internal.pageSize.getHeight();
+
                 const ratio = Math.min(pageWidth / img.width, pageHeight / img.height);
                 const scaledWidth = img.width * ratio;
                 const scaledHeight = img.height * ratio;
+
                 const x = (pageWidth - scaledWidth) / 2;
                 const y = 50;
+
+                pdf.setFillColor("#ffffff");
+                pdf.rect(0, 0, pageWidth, pageHeight, "F");
 
                 pdf.setTextColor(0, 0, 0);
                 pdf.setFont("helvetica", "bold");
                 pdf.setFontSize(20);
-                pdf.text(currentTitle, pageWidth / 2, 30, { align: "center" });
+                pdf.text(title, pageWidth / 2, 30, { align: "center" });
 
-                pdf.addImage(dataUrl, "PNG", x, y, scaledWidth, scaledHeight);
+                pdf.addImage(finalDataUrl, "PNG", x, y, scaledWidth, scaledHeight);
                 pdf.save("dashboard.pdf");
+            };
+
+            img.onerror = () => {
+                throw new Error("Image loading failed");
             };
         } catch (err) {
             console.error("Error generating PDF", err);
-        } finally {
-            noPrintElements.forEach((el) => ((el as HTMLElement).style.opacity = ""));
-            onClose();
         }
-    }
+    };
 
     useEffect(() => {
         if (!isOpen || !contentRef.current) return;
@@ -114,8 +206,8 @@ const PdfDownloader: React.FC<PdfDownloadModalProps> = ({ isOpen, onClose, conte
     if (!isOpen || !contentRef || !contentRef.current) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div className="bg-white w-full h-full sm:w-[80%] sm:h-[90%] rounded-lg overflow-hidden shadow-lg flex flex-col">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/10">
+            <div className="bg-white/10 w-full h-full sm:w-[80%] sm:h-[90%] rounded-lg overflow-hidden shadow-lg flex flex-col">
                 <div className="p-4 border-b relative flex items-center justify-between">
                     <h2 className="text-xl font-bold">Preview</h2>
                     <div className="absolute left-1/2 -translate-x-1/2">
