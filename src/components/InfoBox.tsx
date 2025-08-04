@@ -1,31 +1,43 @@
+"use client"
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+
 interface InfoBoxProps {
     title: string;
 }
 
-function InfoBox({ title }: InfoBoxProps) {
+export function InfoBox({ title }: InfoBoxProps) {
     const items = [
-        'Lorem ipsum dolor sit amet consectetur adipisicing elit. Consequatur, harum ex.',
-        'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Error, delectus.',
-        'Lorem ipsum dolor sit amet consectetur adipisicing elit. Molestias sed unde tenetur hic',
-        'Lorem ipsum dolor sit amet consectetur adipisicing elit. Voluptatibus, totam.',
+        "Lorem ipsum dolor sit amet consectetur adipisicing elit. Consequatur, harum ex.",
+        "Lorem ipsum dolor sit amet, consectetur adipisicing elit. Error, delectus.",
+        "Lorem ipsum dolor sit amet consectetur adipisicing elit. Molestias sed unde tenetur hic",
+        "Lorem ipsum dolor sit amet consectetur adipisicing elit. Voluptatibus, totam.",
     ];
 
-    const colors = ['border-blue-500', 'border-green-500', 'border-yellow-500', 'border-red-500'];
+    const colors = [
+        "border-l-4 border-blue-500",
+        "border-l-4 border-green-500",
+        "border-l-4 border-yellow-500",
+        "border-l-4 border-red-500",
+    ];
 
     return (
-        <div className="w-full max-w-xl mx-auto p-4 bg-white rounded-lg shadow-md">
-            <h2 className="text-lg font-semibold mb-4">{title}</h2>
-            <div className="flex flex-col gap-4">
+        <Card className="w-full max-w-xl mx-auto">
+            <CardHeader>
+                <CardTitle>{title}</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
                 {items.map((item, index) => (
                     <div
                         key={index}
-                        className={`p-4 bg-gray-100 rounded-md text-gray-800 text-sm leading-relaxed border-l-4 pl-4 ${colors[index % colors.length]}`}>
+                        className={`p-4 bg-muted text-muted-foreground rounded-md text-sm leading-relaxed ${colors[index % colors.length]}`}
+                    >
                         {item}
                     </div>
                 ))}
-            </div>
-        </div>
+            </CardContent>
+        </Card>
     );
-};
+}
 
 export default InfoBox;
