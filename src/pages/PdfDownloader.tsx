@@ -1,255 +1,233 @@
-import React, { useState, useEffect } from "react";
-import { toPng } from "html-to-image";
-import jsPDF from "jspdf";
+"use client"
+
+import React, { useEffect, useState, useRef } from "react"
+import { toPng } from "html-to-image"
+import jsPDF from "jspdf"
+
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 interface PdfDownloadModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    contentRef: React.RefObject<HTMLDivElement | null>;
+    isOpen: boolean
+    onClose: () => void
+    contentRef: React.RefObject<HTMLDivElement | null>
 }
 
-const PdfDownloader: React.FC<PdfDownloadModalProps> = ({ isOpen, onClose, contentRef }) => {
-    const [cleanedContent, setCleanedContent] = useState<string>("");
-    const [title, setTitle] = useState<string>("CX Dashboard Info DK");
-    const bgColor = 'white';
+const PdfDownloader: React.FC<PdfDownloadModalProps> = ({
+    isOpen,
+    onClose,
+    contentRef,
+}) => {
+    const [cleanedContent, setCleanedContent] = useState<string>("")
+    const [title, setTitle] = useState<string>("CX Dashboard Info")
+    const previewRef = useRef<HTMLDivElement>(null)
+    const [scale, setScale] = useState(1)
 
     const IMAGE_OPTIONS = {
         quality: 1.0,
         pixelRatio: 2,
-        backgroundColor: bgColor,
-    };
+        backgroundColor: "#ffffff",
+    }
 
-    // async function handleDownload() {
-    //     if (!contentRef.current) return;
+    useEffect(() => {
+        if (!isOpen || !contentRef.current || !previewRef.current) return
 
-    //     const noPrintElements = contentRef.current.querySelectorAll(".no-print");
-    //     noPrintElements.forEach((el) => ((el as HTMLElement).style.opacity = "0"));
+        const originalWidth = contentRef.current.offsetWidth
+        const previewWidth = previewRef.current.offsetWidth
 
-    //     try {
-    //         const dataUrl = await toPng(contentRef.current, IMAGE_OPTIONS);
+        if (originalWidth > 0 && previewWidth > 0) {
+            const computedScale = previewWidth / originalWidth
+            setScale(Math.min(1, computedScale)) // Never upscale
+        }
+    }, [isOpen, cleanedContent])
 
-    //         const pdf = new jsPDF({
-    //             orientation: "portrait",
-    //             unit: "px",
-    //             format: "a4",
-    //         });
-
-    //         const currentTitle = title;
-    //         const pageWidth = pdf.internal.pageSize.getWidth();
-    //         const pageHeight = pdf.internal.pageSize.getHeight();
-
-    //         pdf.setFillColor(bgColor);
-    //         pdf.rect(0, 0, pageWidth, pageHeight, "F");
-
-    //         const img = new Image();
-    //         img.src = dataUrl;
-
-    //         img.onload = () => {
-    //             const ratio = Math.min(pageWidth / img.width, pageHeight / img.height);
-    //             const scaledWidth = img.width * ratio;
-    //             const scaledHeight = img.height * ratio;
-    //             const x = (pageWidth - scaledWidth) / 2;
-    //             const y = 50;
-
-    //             pdf.setTextColor(0, 0, 0);
-    //             pdf.setFont("helvetica", "bold");
-    //             pdf.setFontSize(20);
-    //             pdf.text(currentTitle, pageWidth / 2, 30, { align: "center" });
-
-    //             pdf.addImage(dataUrl, "PNG", x, y, scaledWidth, scaledHeight);
-    //             pdf.save("dashboard.pdf");
-    //         };
-    //     } catch (err) {
-    //         console.error("Error generating PDF", err);
-    //     } finally {
-    //         noPrintElements.forEach((el) => ((el as HTMLElement).style.opacity = ""));
-    //         onClose();
-    //     }
-    // }
 
     async function handleDownload() {
-        if (!contentRef.current) return;
+        if (!contentRef.current) return
 
         try {
-            const originalNode = contentRef.current;
-            const clone = originalNode.cloneNode(true) as HTMLElement;
+            const originalNode = contentRef.current
+            const clone = originalNode.cloneNode(true) as HTMLElement
 
-            clone.querySelectorAll(".no-print").forEach((el) => el.remove());
+            clone.querySelectorAll(".no-print").forEach((el) => el.remove())
 
-            const originalCharts = originalNode.querySelectorAll(".chart-snapshot");
-            const clonedCharts = clone.querySelectorAll(".chart-snapshot");
+            const originalCharts = originalNode.querySelectorAll(".chart-snapshot")
+            const clonedCharts = clone.querySelectorAll(".chart-snapshot")
 
             await Promise.all(
                 Array.from(originalCharts).map(async (chartEl, i) => {
-                    const cloneEl = clonedCharts[i] as HTMLElement;
-
+                    const cloneEl = clonedCharts[i] as HTMLElement
                     try {
-                        const dataUrl = await toPng(chartEl as HTMLElement, { cacheBust: true });
+                        const dataUrl = await toPng(chartEl as HTMLElement, {
+                            cacheBust: true,
+                            backgroundColor: "#ffffff",
+                        })
 
-                        const img = new Image();
-                        img.src = dataUrl;
-                        img.style.width = "100%";
-                        img.style.borderRadius = "inherit";
-                        img.style.boxShadow = "inherit";
+                        const img = new Image()
+                        img.src = dataUrl
+                        img.style.width = "100%"
+                        img.style.borderRadius = "inherit"
+                        img.style.boxShadow = "inherit"
 
-                        await img.decode();
-
-                        cloneEl.innerHTML = "";
-                        cloneEl.appendChild(img);
+                        await img.decode()
+                        cloneEl.innerHTML = ""
+                        cloneEl.appendChild(img)
                     } catch (err) {
-                        console.warn("Failed to render chart image", err);
+                        console.warn("Failed to render chart image", err)
                     }
                 })
-            );
+            )
 
-            const hiddenWrapper = document.createElement("div");
-            hiddenWrapper.style.position = "fixed";
-            hiddenWrapper.style.top = "-10000px";
-            hiddenWrapper.style.left = "-10000px";
-            hiddenWrapper.style.zIndex = "-999";
-            hiddenWrapper.style.pointerEvents = "none";
-            hiddenWrapper.appendChild(clone);
-            document.body.appendChild(hiddenWrapper);
+            const hiddenWrapper = document.createElement("div")
+            hiddenWrapper.style.position = "fixed"
+            hiddenWrapper.style.top = "-10000px"
+            hiddenWrapper.style.left = "-10000px"
+            hiddenWrapper.style.zIndex = "-999"
+            hiddenWrapper.style.pointerEvents = "none"
+            hiddenWrapper.appendChild(clone)
+            document.body.appendChild(hiddenWrapper)
 
             const finalDataUrl = await toPng(clone, {
                 backgroundColor: "#ffffff",
                 cacheBust: true,
-            });
+            })
 
-            document.body.removeChild(hiddenWrapper);
+            document.body.removeChild(hiddenWrapper)
 
             const pdf = new jsPDF({
                 orientation: "portrait",
                 unit: "px",
                 format: "a4",
-            });
+            })
 
-            const img = new Image();
-            img.src = finalDataUrl;
+            const img = new Image()
+            img.src = finalDataUrl
 
             img.onload = () => {
-                const pageWidth = pdf.internal.pageSize.getWidth();
-                const pageHeight = pdf.internal.pageSize.getHeight();
+                const pageWidth = pdf.internal.pageSize.getWidth()
+                const pageHeight = pdf.internal.pageSize.getHeight()
 
-                const ratio = Math.min(pageWidth / img.width, pageHeight / img.height);
-                const scaledWidth = img.width * ratio;
-                const scaledHeight = img.height * ratio;
+                const ratio = Math.min(pageWidth / img.width, pageHeight / img.height)
+                const scaledWidth = img.width * ratio
+                const scaledHeight = img.height * ratio
 
-                const x = (pageWidth - scaledWidth) / 2;
-                const y = 50;
+                const x = (pageWidth - scaledWidth) / 2
+                const y = 50
 
-                pdf.setFillColor("#ffffff");
-                pdf.rect(0, 0, pageWidth, pageHeight, "F");
-
-                pdf.setTextColor(0, 0, 0);
-                pdf.setFont("helvetica", "bold");
-                pdf.setFontSize(20);
-                pdf.text(title, pageWidth / 2, 30, { align: "center" });
-
-                pdf.addImage(finalDataUrl, "PNG", x, y, scaledWidth, scaledHeight);
-                pdf.save("dashboard.pdf");
-            };
+                pdf.setFillColor("#ffffff")
+                pdf.rect(0, 0, pageWidth, pageHeight, "F")
+                pdf.setTextColor(0, 0, 0)
+                pdf.setFont("helvetica", "bold")
+                pdf.setFontSize(20)
+                pdf.text(title, pageWidth / 2, 30, { align: "center" })
+                pdf.addImage(finalDataUrl, "PNG", x, y, scaledWidth, scaledHeight)
+                pdf.save("dashboard.pdf")
+            }
 
             img.onerror = () => {
-                throw new Error("Image loading failed");
-            };
+                throw new Error("Image loading failed")
+            }
         } catch (err) {
-            console.error("Error generating PDF", err);
+            console.error("Error generating PDF", err)
         }
-    };
+    }
 
     useEffect(() => {
-        if (!isOpen || !contentRef.current) return;
-
-        let isMounted = true;
+        if (!isOpen || !contentRef.current) return
+        let isMounted = true
 
         const generatePreview = async () => {
-            const source = contentRef.current!;
-            const clonedNode = source.cloneNode(true) as HTMLElement;
+            const source = contentRef.current!
+            const clonedNode = source.cloneNode(true) as HTMLElement
 
-            clonedNode.querySelectorAll(".no-print").forEach((el) => el.remove());
+            clonedNode.querySelectorAll(".no-print").forEach((el) => el.remove())
 
-            const originalCharts = source.querySelectorAll(".chart-snapshot");
-            const clonedCharts = clonedNode.querySelectorAll(".chart-snapshot");
+            const originalCharts = source.querySelectorAll(".chart-snapshot")
+            const clonedCharts = clonedNode.querySelectorAll(".chart-snapshot")
 
             await Promise.all(
                 Array.from(originalCharts).map(async (chartEl, index) => {
                     try {
-                        const dataUrl = await toPng(chartEl as HTMLElement, IMAGE_OPTIONS);
+                        const dataUrl = await toPng(chartEl as HTMLElement, IMAGE_OPTIONS)
 
-                        const img = new Image();
-                        img.src = dataUrl;
-                        img.style.width = "100%";
-                        img.style.borderRadius = "inherit";
-                        img.style.boxShadow = "inherit";
+                        const img = new Image()
+                        img.src = dataUrl
+                        img.style.width = "100%"
+                        img.style.borderRadius = "inherit"
+                        img.style.boxShadow = "inherit"
 
-                        const target = clonedCharts[index];
-                        target.innerHTML = "";
-                        target.appendChild(img);
+                        const target = clonedCharts[index]
+                        target.innerHTML = ""
+                        target.appendChild(img)
                     } catch (err) {
-                        console.warn("Chart conversion failed", err);
+                        console.warn("Chart conversion failed", err)
                     }
                 })
-            );
+            )
 
             if (isMounted) {
-                setCleanedContent(clonedNode.innerHTML);
+                setCleanedContent(clonedNode.innerHTML)
             }
-        };
+        }
 
-        generatePreview();
-
-        return () => { isMounted = false; };
-    }, [isOpen, contentRef]);
-
-    if (!isOpen || !contentRef || !contentRef.current) return null;
+        generatePreview()
+        return () => {
+            isMounted = false
+        }
+    }, [isOpen, contentRef])
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-            <div className="bg-white w-full h-full sm:w-[80%] sm:h-[90%] rounded-lg overflow-hidden shadow-lg flex flex-col">
-                <div className="p-4 border-b relative flex items-center justify-between">
-                    <h2 className="text-xl font-bold">Preview</h2>
-                    <div className="absolute left-1/2 -translate-x-1/2">
-                        <input
-                            type="text"
-                            placeholder="Enter PDF title..."
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
-                            className="w-64 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-black text-sm"
-                        />
-                    </div>
+        <Dialog open={isOpen} onOpenChange={onClose}>
+            <DialogContent className="max-w-5xl max-h-[95vh] overflow-hidden">
+                <DialogHeader>
+                    <DialogTitle>Download Dashboard PDF</DialogTitle>
+                </DialogHeader>
+
+                <div className="flex flex-col gap-4">
+                    <Input
+                        placeholder="Enter PDF title..."
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                    />
+
+                    <ScrollArea className="border rounded-md p-2 max-h-[60vh] overflow-auto">
+                        <div className="pt-2" ref={previewRef}>
+                            {cleanedContent ? (
+                                <div
+                                    style={{
+                                        transform: `scale(${scale})`,
+                                        transformOrigin: "top left",
+                                        width: `${100 / scale}%`,
+                                    }}
+                                    dangerouslySetInnerHTML={{ __html: cleanedContent }}
+                                />
+                            ) : (
+                                <p className="text-muted-foreground text-sm text-center py-4">
+                                    Generating preview...
+                                </p>
+                            )}
+                        </div>
+                    </ScrollArea>
+
                 </div>
 
-                <div className="flex-1 items-start justify-center overflow-auto p-1">
-                    <div className="scale-[0.7] origin-top print-preview pt-2">
-                        {cleanedContent ? (
-                            <div dangerouslySetInnerHTML={{ __html: cleanedContent }} />
-                        ) : (
-                            <div className="text-center text-sm text-gray-500">
-                                Generating preview…
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                <div className="p-4 border-t flex flex-col sm:flex-row justify-between items-center bg-white gap-3 sm:gap-0">
-                    <button
-                        className="w-full sm:w-auto px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 transition"
-                        onClick={onClose}
-                    >
+                <DialogFooter className="gap-2 sm:justify-between pt-4">
+                    <Button variant="outline" onClick={onClose}>
                         Cancel
-                    </button>
-                    <button
-                        className="w-full sm:w-auto px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 transition"
-                        onClick={handleDownload}
-                    >
-                        Download PDF
-                    </button>
-                </div>
+                    </Button>
+                    <Button onClick={handleDownload}>Download PDF</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    )
+}
 
-            </div>
-        </div>
-    );
-};
-
-export default PdfDownloader;
+export default PdfDownloader
