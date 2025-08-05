@@ -22,6 +22,23 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
     const previewRef = useRef<HTMLDivElement>(null)
 
 
+    function isRenderable(el: HTMLElement) {
+        if (!el.innerText.trim()) return false;
+
+        const rect = el.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) return false;
+
+        const parent = el.parentElement;
+        if (parent && parent.innerText.trim() === el.innerText.trim()) return false;
+
+        const childTextElements = Array.from(el.children).filter(child =>
+            child instanceof HTMLElement && child.innerText.trim()
+        );
+        if (childTextElements.length > 0) return false;
+
+        return true;
+    }
+
     function pxToIn(px: number): number {
         return px / 96;
     }
@@ -86,6 +103,29 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
         };
     }
 
+    function getLowestUniqueElement(root: HTMLElement, text: string): HTMLElement | null {
+        const matchingElements = Array.from(root.querySelectorAll("*")).filter(el =>
+            el instanceof HTMLElement && el.textContent?.includes(text)
+        ) as HTMLElement[];
+
+        matchingElements.sort((a, b) => {
+            return b.querySelectorAll("*").length - a.querySelectorAll("*").length;
+        });
+
+        for (const el of matchingElements) {
+            const children = Array.from(el.querySelectorAll("*"));
+            const hasChildWithSameText = children.some(child =>
+                child.textContent?.trim() === text.trim()
+            );
+
+            if (!hasChildWithSameText) {
+                return el;
+            }
+        }
+
+        return null;
+    }
+
     async function handleDownload() {
         if (!contentRef.current) return;
 
@@ -95,11 +135,36 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
         const rootRect = root.getBoundingClientRect();
 
         const allNodes = root.querySelectorAll("*");
+        const convertedSet = new Set<string>();
+
+        Array.from(root.querySelectorAll("*")).forEach((el, idx) => {
+            if (el instanceof HTMLElement) {
+                el.setAttribute("data-uid", `el-${idx}`);
+            }
+        });
+
         for (const el of allNodes) {
             if (!(el instanceof HTMLElement)) continue;
             if (el.closest('.no-print')) continue;
+            // if (!isRenderable(el)) continue;
 
-            const info = getElementInfo(el, rootRect);
+            const text = el.textContent?.trim();
+            // if (!text || [...convertedSet].some(t => text.includes(t))) continue;
+            if (!text) continue;
+            const uid = el.getAttribute("data-uid");
+            if (!uid || convertedSet.has(uid)) continue;
+
+            const meaningfulChildren = Array.from(el.children).filter(child => child instanceof HTMLElement && child.innerText.trim());
+            if (meaningfulChildren.length > 1) continue;
+
+            const targetEl = getLowestUniqueElement(root, text);
+            if (!targetEl) continue;
+            const info = getElementInfo(targetEl, rootRect);
+
+            console.log('El: ', el);
+            console.log('Target: ', targetEl);
+
+            // const info = getElementInfo(el, rootRect);
             if (!info.text.trim()) continue;
 
             slide.addText(info.text, {
@@ -115,6 +180,9 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
                 bold: info.styles.fontWeight === "bold" || parseInt(info.styles.fontWeight) >= 600,
                 align: info.styles.textAlign as any,
             });
+
+            // convertedSet.add(text);
+            convertedSet.add(uid);
         }
 
         ppt.writeFile({ fileName: `${title}.pptx` });
