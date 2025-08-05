@@ -1,69 +1,43 @@
-# React + TypeScript + Vite
+# ⚛️ React POCs Collection
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This repository contains a collection of small Proof of Concepts (POCs) built using **React**. Each POC demonstrates how to integrate or implement specific libraries, components, or features commonly used in modern React applications.
 
-Currently, two official plugins are available:
+## 🚀 What's Included
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### 1. 📄 PDF Downloader
+A simple implementation to export part of a React component as a downloadable PDF using:
+- `html2canvas`
+- `jspdf`
+- `html-to-image`
 
-## Expanding the ESLint configuration
+📌 **Features:**
+- Capture specific elements using `ref`
+- Render charts and content into high-resolution PDFs
+- Modal confirmation before download
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### 2. 🎨 shadcn/ui Integration
+Integration of [shadcn/ui](https://ui.shadcn.com/) — a beautiful, customizable UI component library based on Radix UI and Tailwind CSS.
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+📌 **Features:**
+- Consistent styling with Tailwind
+- Easily extendable component set
+- Modern UI best practices
 
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
+---
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## 🛠️ Getting Started
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Prerequisites
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Make sure you have the following installed:
 
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+- [Node.js](https://nodejs.org/) (v18 or later recommended)
+- [pnpm](https://pnpm.io/) or [npm](https://www.npmjs.com/)
+- Git
+
+### 📦 Installation
+
+```bash
+git clone https://github.com/your-username/react-pocs.git
+cd react-pocs
+pnpm install # or npm install
