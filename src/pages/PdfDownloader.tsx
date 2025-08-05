@@ -15,13 +15,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
-interface PdfDownloadModalProps {
+interface PdfDownloaderProps {
     isOpen: boolean
     onClose: () => void
     contentRef: React.RefObject<HTMLDivElement | null>
 }
 
-const PdfDownloader: React.FC<PdfDownloadModalProps> = ({
+const PdfDownloader: React.FC<PdfDownloaderProps> = ({
     isOpen,
     onClose,
     contentRef,

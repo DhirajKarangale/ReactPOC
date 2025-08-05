@@ -1,21 +1,19 @@
 "use client"
 
 import { useState, useRef } from "react"
+
+import { Button } from "@/components/ui/button"
+import { Card, CardHeader, CardTitle } from "@/components/ui/card"
+
 import Chart from "../components/Chart"
 import InfoBox from "../components/InfoBox"
-import PdfDownloadModal from "./PdfDownloader"
-
-import { Card, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import PdfDownloader from "./PdfDownloader"
+import PptDownloadModal from "./PptDownloader"
 
 function Dashboard() {
       const printRef = useRef<HTMLDivElement>(null)
-      const [showModal, setShowModal] = useState(false)
-
-      async function Download() {
-            if (!printRef.current) return
-            setShowModal(true)
-      }
+      const [showPdfModal, setShowPdfModal] = useState(false)
+      const [showPptModal, setShowPptModal] = useState(false)
 
       return (
             <>
@@ -25,7 +23,10 @@ function Dashboard() {
                               <Card className="no-print">
                                     <CardHeader className="flex flex-col sm:flex-row items-center justify-between">
                                           <CardTitle className="text-xl">Dashboard</CardTitle>
-                                          <Button onClick={Download}>Download</Button>
+                                          <div className="flex flex-wrap gap-2">
+                                                <Button onClick={() => setShowPdfModal(true)}>Download PDF</Button>
+                                                <Button onClick={() => setShowPptModal(true)} variant="outline">Download PPT</Button>
+                                          </div>
                                     </CardHeader>
                               </Card>
 
@@ -46,9 +47,15 @@ function Dashboard() {
                         </div>
                   </div>
 
-                  <PdfDownloadModal
-                        isOpen={showModal}
-                        onClose={() => setShowModal(false)}
+                  <PdfDownloader
+                        isOpen={showPdfModal}
+                        onClose={() => setShowPdfModal(false)}
+                        contentRef={printRef}
+                  />
+
+                  <PptDownloadModal
+                        isOpen={showPptModal}
+                        onClose={() => setShowPptModal(false)}
                         contentRef={printRef}
                   />
             </>
