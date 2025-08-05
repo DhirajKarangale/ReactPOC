@@ -23,14 +23,12 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
 
 
     function pxToIn(px: number): number {
-        return px / 96; // Default screen DPI
+        return px / 96;
     }
 
     function parseCssColorToHex(cssColor: string): string {
         try {
-            // 1. Check if it's OKLCH format
             if (cssColor.startsWith("oklch(")) {
-                // Extract values from the string
                 const match = cssColor.match(/oklch\(([^)]+)\)/);
                 if (match) {
                     const [l, c, h] = match[1].trim().split(/\s+/).map(Number);
@@ -38,14 +36,13 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
                     return formatHex(color);
                 }
             }
-    
-            // 2. Fallback: use canvas to handle other CSS color formats
+
             const ctx = document.createElement("canvas").getContext("2d");
             if (!ctx) return "#000000";
-    
+
             ctx.fillStyle = cssColor;
-            const computed = ctx.fillStyle; // returns rgb(...) string
-    
+            const computed = ctx.fillStyle;
+
             const rgbMatch = computed.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
             if (rgbMatch) {
                 const [_, r, g, b] = rgbMatch;
@@ -59,8 +56,8 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
                         .join("")
                 );
             }
-    
-            return computed; // Might already be a hex string
+
+            return computed;
         } catch (e) {
             console.warn("Failed to convert color:", cssColor);
             return "#000000";
@@ -70,8 +67,6 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
     function getElementInfo(el: HTMLElement, rootRect: DOMRect) {
         const style = getComputedStyle(el);
         const rect = el.getBoundingClientRect();
-        console.log('color: ', style.color, '->', parseCssColorToHex(style.color));
-        console.log('backgroundColor: ', style.backgroundColor, '->', parseCssColorToHex(style.backgroundColor));
 
         return {
             tag: el.tagName,
@@ -102,13 +97,10 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
         const allNodes = root.querySelectorAll("*");
         for (const el of allNodes) {
             if (!(el instanceof HTMLElement)) continue;
+            if (el.closest('.no-print')) continue;
 
             const info = getElementInfo(el, rootRect);
             if (!info.text.trim()) continue;
-
-            //   console.log('Info: ', info);
-            //   console.log('styles: ', info.styles);
-            //   console.log('backgroundColor: ', info.styles.backgroundColor);
 
             slide.addText(info.text, {
                 x: pxToIn(info.x),
