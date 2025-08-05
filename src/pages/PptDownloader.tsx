@@ -22,23 +22,6 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
     const previewRef = useRef<HTMLDivElement>(null)
 
 
-    function isRenderable(el: HTMLElement) {
-        if (!el.innerText.trim()) return false;
-
-        const rect = el.getBoundingClientRect();
-        if (rect.width === 0 || rect.height === 0) return false;
-
-        const parent = el.parentElement;
-        if (parent && parent.innerText.trim() === el.innerText.trim()) return false;
-
-        const childTextElements = Array.from(el.children).filter(child =>
-            child instanceof HTMLElement && child.innerText.trim()
-        );
-        if (childTextElements.length > 0) return false;
-
-        return true;
-    }
-
     function pxToIn(px: number): number {
         return px / 96;
     }
@@ -146,10 +129,8 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
         for (const el of allNodes) {
             if (!(el instanceof HTMLElement)) continue;
             if (el.closest('.no-print')) continue;
-            // if (!isRenderable(el)) continue;
 
             const text = el.textContent?.trim();
-            // if (!text || [...convertedSet].some(t => text.includes(t))) continue;
             if (!text) continue;
             const uid = el.getAttribute("data-uid");
             if (!uid || convertedSet.has(uid)) continue;
@@ -164,7 +145,6 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
             console.log('El: ', el);
             console.log('Target: ', targetEl);
 
-            // const info = getElementInfo(el, rootRect);
             if (!info.text.trim()) continue;
 
             slide.addText(info.text, {
@@ -181,7 +161,6 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
                 align: info.styles.textAlign as any,
             });
 
-            // convertedSet.add(text);
             convertedSet.add(uid);
         }
 
