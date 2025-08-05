@@ -58,7 +58,7 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
                 fontSize: parseInt(style.fontSize),
                 fontWeight: style.fontWeight,
                 textAlign: style.textAlign,
-                borderColor: style.borderColor,
+                borderColor: parseCssColorToHex(style.borderColor),
                 borderWidth: style.borderWidth,
                 margin: style.margin,
                 padding: style.padding,
@@ -131,13 +131,13 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
         slide.background = { fill: bgColor };
 
         slide.addText(title, {
-            x: 0, 
-            y: 0.3, 
-            w: sizeX, 
-            h: 1, 
+            x: 0,
+            y: 0.3,
+            w: sizeX,
+            h: 1,
             fontSize: 28,
             bold: true,
-            align: "center", 
+            align: "center",
             color: "#000000",
         });
 
@@ -203,13 +203,28 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
 
             const isRounded = parseInt(info.styles.borderRadius || "0") > 0;
 
-            slide.addShape(isRounded ? ppt.ShapeType.roundRect : ppt.ShapeType.roundRect, {
+            // const borderWidth = parseInt(info.styles.borderWidth || "0");
+            // const borderColor = info.styles.borderColor?.toLowerCase();
+            // const showBorder = borderWidth > 0 && borderColor !== "transparent" && borderColor !== "rgba(0, 0, 0, 0)";
+
+            const borderColor = info.styles.borderColor?.toLowerCase();
+            const borderWidth = parseInt(info.styles.borderWidth || "0");
+            const showBorder2 = borderWidth > 0 && borderColor !== "#00000000" && borderColor !== "transparent" && borderColor !== "#000000";
+
+            slide.addShape(ppt.ShapeType.roundRect, {
                 x: info.x,
                 y: info.y,
                 w: info.w,
                 h: info.h,
-                fill: info.styles.backgroundColor !== "rgba(0, 0, 0, 0)" ? { color: info.styles.backgroundColor } : undefined,
-                line: { color: info.styles.borderColor },
+                fill: info.styles.backgroundColor !== "#00000000"
+                    ? { color: info.styles.backgroundColor }
+                    : undefined,
+                ...(showBorder2 && {
+                    line: {
+                        color: info.styles.borderColor,
+                        width: borderWidth,
+                    },
+                }),
             });
 
             shapeUIDs.add(uid);

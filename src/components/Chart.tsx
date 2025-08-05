@@ -19,7 +19,7 @@ const chartData = [
 
 function Chart({ title }: ChartProps) {
     return (
-        <Card className="flex flex-col chart-snapshot">
+        <Card className="flex flex-col chart-snapshot border border-red-500">
             <CardHeader className="items-center pb-0">
                 <CardTitle>{title}</CardTitle>
             </CardHeader>
