@@ -32,7 +32,7 @@ Integration of [shadcn/ui](https://ui.shadcn.com/) — a beautiful, customizable
 Make sure you have the following installed:
 
 - [Node.js](https://nodejs.org/) (v18 or later recommended)
-- [pnpm](https://pnpm.io/) or [npm](https://www.npmjs.com/)
+- [npm](https://www.npmjs.com/)
 - Git
 
 ### 📦 Installation

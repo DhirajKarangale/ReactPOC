@@ -8,7 +8,7 @@ import { Card, CardHeader, CardTitle } from "@/components/ui/card"
 import Chart from "../components/Chart"
 import InfoBox from "../components/InfoBox"
 import PdfDownloader from "./PdfDownloader"
-import PptDownloadModal from "./PptDownloader"
+import PptDownloader from "./PptDownloader"
 
 function Dashboard() {
       const printRef = useRef<HTMLDivElement>(null)
@@ -53,7 +53,7 @@ function Dashboard() {
                         contentRef={printRef}
                   />
 
-                  <PptDownloadModal
+                  <PptDownloader
                         isOpen={showPptModal}
                         onClose={() => setShowPptModal(false)}
                         contentRef={printRef}

@@ -3,22 +3,131 @@
 import React, { useEffect, useRef, useState } from "react"
 import { toPng } from "html-to-image"
 import PptxGenJS from "pptxgenjs"
+import { oklch as parseOKLCH, formatHex } from 'culori'
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
-interface PptDownloadModalProps {
+interface PptDownloadProps {
     isOpen: boolean
     onClose: () => void
     contentRef: React.RefObject<HTMLDivElement | null>
 }
 
-const PptDownloader: React.FC<PptDownloadModalProps> = ({ isOpen, onClose, contentRef }) => {
+const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef }) => {
     const [title, setTitle] = useState("CX Dashboard Info")
     const [previewImage, setPreviewImage] = useState<string | null>(null)
     const previewRef = useRef<HTMLDivElement>(null)
+
+
+    function pxToIn(px: number): number {
+        return px / 96; // Default screen DPI
+    }
+
+    function parseCssColorToHex(cssColor: string): string {
+        try {
+            // 1. Check if it's OKLCH format
+            if (cssColor.startsWith("oklch(")) {
+                // Extract values from the string
+                const match = cssColor.match(/oklch\(([^)]+)\)/);
+                if (match) {
+                    const [l, c, h] = match[1].trim().split(/\s+/).map(Number);
+                    const color = parseOKLCH({ mode: "oklch", l, c, h });
+                    return formatHex(color);
+                }
+            }
+    
+            // 2. Fallback: use canvas to handle other CSS color formats
+            const ctx = document.createElement("canvas").getContext("2d");
+            if (!ctx) return "#000000";
+    
+            ctx.fillStyle = cssColor;
+            const computed = ctx.fillStyle; // returns rgb(...) string
+    
+            const rgbMatch = computed.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+            if (rgbMatch) {
+                const [_, r, g, b] = rgbMatch;
+                return (
+                    "#" +
+                    [r, g, b]
+                        .map((x) => {
+                            const hex = parseInt(x).toString(16);
+                            return hex.length === 1 ? "0" + hex : hex;
+                        })
+                        .join("")
+                );
+            }
+    
+            return computed; // Might already be a hex string
+        } catch (e) {
+            console.warn("Failed to convert color:", cssColor);
+            return "#000000";
+        }
+    }
+
+    function getElementInfo(el: HTMLElement, rootRect: DOMRect) {
+        const style = getComputedStyle(el);
+        const rect = el.getBoundingClientRect();
+        console.log('color: ', style.color, '->', parseCssColorToHex(style.color));
+        console.log('backgroundColor: ', style.backgroundColor, '->', parseCssColorToHex(style.backgroundColor));
+
+        return {
+            tag: el.tagName,
+            text: el.innerText || "",
+            x: rect.left - rootRect.left,
+            y: rect.top - rootRect.top,
+            width: rect.width,
+            height: rect.height,
+            styles: {
+                backgroundColor: parseCssColorToHex(style.backgroundColor),
+                color: parseCssColorToHex(style.color),
+                fontSize: parseInt(style.fontSize),
+                fontWeight: style.fontWeight,
+                borderRadius: style.borderRadius,
+                textAlign: style.textAlign,
+            },
+        };
+    }
+
+    async function handleDownload() {
+        if (!contentRef.current) return;
+
+        const root = contentRef.current;
+        const ppt = new PptxGenJS();
+        const slide = ppt.addSlide();
+        const rootRect = root.getBoundingClientRect();
+
+        const allNodes = root.querySelectorAll("*");
+        for (const el of allNodes) {
+            if (!(el instanceof HTMLElement)) continue;
+
+            const info = getElementInfo(el, rootRect);
+            if (!info.text.trim()) continue;
+
+            //   console.log('Info: ', info);
+            //   console.log('styles: ', info.styles);
+            //   console.log('backgroundColor: ', info.styles.backgroundColor);
+
+            slide.addText(info.text, {
+                x: pxToIn(info.x),
+                y: pxToIn(info.y),
+                w: pxToIn(info.width),
+                h: pxToIn(info.height),
+                fontSize: info.styles.fontSize || 12,
+                color: info.styles.color || "#000000",
+                fill: info.styles.backgroundColor !== "rgba(0, 0, 0, 0)"
+                    ? { color: info.styles.backgroundColor }
+                    : undefined,
+                bold: info.styles.fontWeight === "bold" || parseInt(info.styles.fontWeight) >= 600,
+                align: info.styles.textAlign as any,
+            });
+        }
+
+        ppt.writeFile({ fileName: `${title}.pptx` });
+    }
+
 
     useEffect(() => {
         if (!isOpen || !contentRef.current) return
@@ -69,31 +178,6 @@ const PptDownloader: React.FC<PptDownloadModalProps> = ({ isOpen, onClose, conte
 
         preparePreview()
     }, [isOpen, contentRef])
-
-    async function handleDownload() {
-        if (!previewImage) return
-
-        const pptx = new PptxGenJS()
-        const slide = pptx.addSlide()
-
-        slide.addText(title, {
-            x: 0.5,
-            y: 0.3,
-            fontSize: 18,
-            bold: true,
-        })
-
-        slide.addImage({
-            data: previewImage,
-            x: 0.5,
-            y: 1,
-            w: 8,
-            h: 5,
-        })
-
-        await pptx.writeFile({ fileName: `${title}.pptx` })
-        onClose()
-    }
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
