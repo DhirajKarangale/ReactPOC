@@ -21,9 +21,6 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
     const [previewImage, setPreviewImage] = useState<string | null>(null)
     const previewRef = useRef<HTMLDivElement>(null)
 
-    // Helpers
-    const pxToIn = (px: number) => px / 96
-
     const parseCssColorToHex = (cssColor: string): string => {
         try {
             if (cssColor.startsWith("oklch(")) {
@@ -44,16 +41,16 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
         }
     }
 
-    const getElementInfo = (el: HTMLElement, rootRect: DOMRect) => {
+    const getElementInfo = (el: HTMLElement, rootRect: DOMRect, pxToInX: (px: number) => number, pxToInY: (px: number) => number) => {
         const style = getComputedStyle(el)
         const rect = el.getBoundingClientRect()
 
         return {
             text: el.innerText || "",
-            x: pxToIn(rect.left - rootRect.left),
-            y: pxToIn(rect.top - rootRect.top),
-            w: pxToIn(rect.width),
-            h: pxToIn(rect.height),
+            x: pxToInX(rect.left - rootRect.left),
+            y: pxToInY(rect.top - rootRect.top),
+            w: pxToInX(rect.width),
+            h: pxToInY(rect.height),
             styles: {
                 backgroundColor: parseCssColorToHex(style.backgroundColor),
                 color: parseCssColorToHex(style.color),
@@ -100,7 +97,22 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
 
         const root = contentRef.current
         const rootRect = root.getBoundingClientRect()
+        const rootWidth = rootRect.width
+        const rootHeight = rootRect.height
+
+        const sizeX = 14.4;
+        const sizeY = 14.58;
+        // const sizeY = 8.1;
+
+        const scaleX = sizeX / rootWidth
+        const scaleY = sizeY / rootHeight
+
+        const pxToInX = (px: number) => px * scaleX;
+        const pxToInY = (px: number) => px * scaleY;
+
         const ppt = new PptxGenJS()
+        ppt.defineLayout({ name: "Custom", width: sizeX, height: sizeY })
+        ppt.layout = "Custom"
         const slide = ppt.addSlide()
         const convertedSet = new Set<string>()
 
@@ -124,7 +136,7 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
             const targetUID = target.getAttribute("data-uid")
             if (!targetUID || convertedSet.has(targetUID)) continue
 
-            const info = getElementInfo(target, rootRect)
+            const info = getElementInfo(target, rootRect, pxToInX, pxToInY)
             if (!info.text.trim()) continue
 
             slide.addText(info.text, {
