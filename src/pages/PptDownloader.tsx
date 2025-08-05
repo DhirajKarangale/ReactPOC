@@ -20,6 +20,7 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
     const [title, setTitle] = useState("CX Dashboard Info")
     const [previewImage, setPreviewImage] = useState<string | null>(null)
     const previewRef = useRef<HTMLDivElement>(null)
+    const bgColor = "#F5F5F5";
 
     const parseCssColorToHex = (cssColor: string): string => {
         try {
@@ -57,6 +58,11 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
                 fontSize: parseInt(style.fontSize),
                 fontWeight: style.fontWeight,
                 textAlign: style.textAlign,
+                borderColor: style.borderColor,
+                borderWidth: style.borderWidth,
+                margin: style.margin,
+                padding: style.padding,
+                borderRadius: style.borderRadius,
             },
         }
     }
@@ -92,6 +98,14 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
         })
     }
 
+    const hasVisualStyle = (style: CSSStyleDeclaration) => {
+        return (
+            style.backgroundColor && style.backgroundColor !== "rgba(0, 0, 0, 0)" ||
+            parseInt(style.borderWidth || "0") > 0 ||
+            parseInt(style.padding || "0") > 0
+        )
+    }
+
     const handleDownload = async () => {
         if (!contentRef.current) return
 
@@ -113,31 +127,97 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
         const ppt = new PptxGenJS()
         ppt.defineLayout({ name: "Custom", width: sizeX, height: sizeY })
         ppt.layout = "Custom"
-        const slide = ppt.addSlide()
-        const convertedSet = new Set<string>()
+        const slide = ppt.addSlide();
+        slide.background = { fill: bgColor };
+
+        slide.addText(title, {
+            x: 0, 
+            y: 0.3, 
+            w: sizeX, 
+            h: 1, 
+            fontSize: 28,
+            bold: true,
+            align: "center", 
+            color: "#000000",
+        });
 
         assignElementUIDs(root)
 
         const allNodes = Array.from(root.querySelectorAll("*"))
 
+        const textNodes: HTMLElement[] = [];
+        const renderedUIDs = new Set<string>();
+
         for (const el of allNodes) {
-            if (!(el instanceof HTMLElement)) continue
-            if (el.closest(".no-print")) continue
+            if (!(el instanceof HTMLElement)) continue;
+            if (el.closest(".no-print")) continue;
 
-            const text = el.innerText.trim()
-            if (!text) continue
+            const text = el.innerText.trim();
+            if (!text) continue;
 
-            const uid = el.getAttribute("data-uid")
-            if (!uid || convertedSet.has(uid)) continue
+            const uid = el.getAttribute("data-uid");
+            if (!uid || renderedUIDs.has(uid)) continue;
 
-            const target = getLowestUniqueElement(root, text, uid)
-            if (!target) continue
+            const target = getLowestUniqueElement(root, text, uid);
+            if (!target) continue;
 
-            const targetUID = target.getAttribute("data-uid")
-            if (!targetUID || convertedSet.has(targetUID)) continue
+            const targetUID = target.getAttribute("data-uid");
+            if (!targetUID || renderedUIDs.has(targetUID)) continue;
 
-            const info = getElementInfo(target, rootRect, pxToInX, pxToInY)
-            if (!info.text.trim()) continue
+            textNodes.push(target);
+            renderedUIDs.add(targetUID);
+        }
+
+        const shapeUIDs = new Set<string>();
+
+        const commonAncestor = (nodes: HTMLElement[]) => {
+            if (nodes.length === 0) return null;
+            let current = nodes[0].parentElement;
+            while (current) {
+                if (nodes.every(n => current?.contains(n))) return current;
+                current = current.parentElement;
+            }
+            return null;
+        };
+
+        const outermostWrapper = commonAncestor(textNodes);
+
+        for (const el of allNodes.reverse()) {
+            if (!(el instanceof HTMLElement)) continue;
+
+            const uid = el.getAttribute("data-uid");
+            if (!uid || shapeUIDs.has(uid)) continue;
+
+            if (el.closest(".no-print")) continue;
+
+            if (el === outermostWrapper) continue;
+
+            const style = getComputedStyle(el);
+            if (!hasVisualStyle(style)) continue;
+
+            const containsTextChild = textNodes.some(textEl => el.contains(textEl));
+            if (!containsTextChild) continue;
+
+            const info = getElementInfo(el, rootRect, pxToInX, pxToInY);
+            if (!info) continue;
+
+            const isRounded = parseInt(info.styles.borderRadius || "0") > 0;
+
+            slide.addShape(isRounded ? ppt.ShapeType.roundRect : ppt.ShapeType.roundRect, {
+                x: info.x,
+                y: info.y,
+                w: info.w,
+                h: info.h,
+                fill: info.styles.backgroundColor !== "rgba(0, 0, 0, 0)" ? { color: info.styles.backgroundColor } : undefined,
+                line: { color: info.styles.borderColor },
+            });
+
+            shapeUIDs.add(uid);
+        }
+
+        for (const el of textNodes) {
+            const info = getElementInfo(el, rootRect, pxToInX, pxToInY);
+            if (!info.text.trim()) continue;
 
             slide.addText(info.text, {
                 x: info.x,
@@ -146,14 +226,15 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
                 h: info.h,
                 fontSize: info.styles.fontSize || 12,
                 color: info.styles.color || "#000000",
-                fill: info.styles.backgroundColor !== "rgba(0, 0, 0, 0)"
-                    ? { color: info.styles.backgroundColor }
-                    : undefined,
+                fill: info.styles.backgroundColor !== "rgba(0, 0, 0, 0)" ? { color: info.styles.backgroundColor } : undefined,
                 bold: info.styles.fontWeight === "bold" || parseInt(info.styles.fontWeight) >= 600,
                 align: info.styles.textAlign as any,
-            })
-
-            convertedSet.add(targetUID)
+                line: {
+                    color: info.styles.borderColor || "transparent",
+                    width: info.styles.borderWidth ? parseInt(info.styles.borderWidth) : 0,
+                },
+                margin: parseInt(info.styles.padding) || 0,
+            });
         }
 
         ppt.writeFile({ fileName: `${title}.pptx` })
