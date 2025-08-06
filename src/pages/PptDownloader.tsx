@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from "react"
 import { toPng } from "html-to-image"
 import PptxGenJS from "pptxgenjs"
-import { oklch as parseOKLCH, formatHex, parse } from "culori"
+import { formatHex, parse, converter } from "culori"
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -21,64 +21,34 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
     const [previewImage, setPreviewImage] = useState<string | null>(null)
     const previewRef = useRef<HTMLDivElement>(null)
     const bgColor = "#F5F5F5";
-
-    const rgbToHex = ({ r, g, b }: { r: number; g: number; b: number }): string => {
-        const clamp = (val: number) => Math.max(0, Math.min(255, Math.round(val * 255)));
-        return `#${[r, g, b].map(clamp).map((v) => v.toString(16).padStart(2, "0")).join("")}`;
-    };
+    const toRgb = converter('rgb');
 
     const parseCssColorToHex = (cssColor: string): string => {
-        // try {
-        //     if (cssColor.startsWith("oklch(")) {
-        //         const match = cssColor.match(/oklch\(([^)]+)\)/)
-        //         if (match) {
-        //             const [l, c, h] = match[1].trim().split(/\s+/).map(Number)
-        //             const color = parseOKLCH({ mode: "oklch", l, c, h })
-        //             return formatHex(color)
-        //         }
-        //     }
+        if (!cssColor) return "transparent";
 
-        //     if (cssColor.startsWith("oklab(")) {
-        //         const match = cssColor.match(/^oklab\(\s*([\d.]+)\s+([\d.-]+)\s+([\d.-]+)(?:\s*\/\s*([\d.]+))?\s*\)$/);
-        //         if (match) {
-        //             const [, lStr, aStr, bStr, alphaStr] = match;
-        //             const L = parseFloat(lStr);
-        //             const a = parseFloat(aStr);
-        //             const b = parseFloat(bStr);
-        //             const alpha = alphaStr ? parseFloat(alphaStr) : 1;
+        const isTransparent =
+            cssColor === "transparent" ||
+            cssColor === "rgba(0, 0, 0, 0)" ||
+            cssColor === "rgba(255, 255, 255, 0)";
 
-        //             const { r, g, b: blue } = oklabToRgb({ L, a, b });
-        //             const hex = rgbToHex({ r, g, b: blue });
-
-        //             if (alpha < 1) {
-        //                 const alphaHex = Math.round(alpha * 255).toString(16).padStart(2, "0");
-        //                 return `${hex}${alphaHex}`;
-        //             }
-
-        //             return hex;
-        //         }
-        //     }
-
-        //     const ctx = document.createElement("canvas").getContext("2d")
-        //     if (!ctx) return "#000000"
-        //     ctx.fillStyle = cssColor
-        //     return ctx.fillStyle
-        // } catch {
-        //     return "#000000"
-        // }
-
-
-
+        if (isTransparent) return "transparent";
 
         try {
             const parsed = parse(cssColor);
-            if (!parsed) return "#000000";
+            if (!parsed) return "transparent";
 
-            return formatHex(parsed);
+            const rgb = toRgb(parsed);
+            if (!rgb) return "transparent";
+
+            if ('alpha' in rgb && rgb.alpha !== undefined && rgb.alpha <= 0.1) {
+                return "transparent";
+            }
+
+            return formatHex(rgb);
         } catch {
-            return "#000000";
+            return "transparent";
         }
-    }
+    };
 
     const getElementInfo = (el: HTMLElement, rootRect: DOMRect, pxToInX: (px: number) => number, pxToInY: (px: number) => number) => {
         const style = getComputedStyle(el)
@@ -97,12 +67,12 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
                 fontWeight: style.fontWeight,
                 textAlign: style.textAlign,
                 borderColor: parseCssColorToHex(style.borderColor),
-                borderWidth: parseInt(style.borderWidth || '0'),
+                borderWidth: parseFloat(style.borderWidth || '0'),
                 margin: style.margin,
                 padding: style.padding,
-                borderRadius: parseInt(style.borderRadius || '0'),
+                borderRadius: parseFloat(style.borderRadius || '0'),
                 outlineColor: parseCssColorToHex(style.outlineColor),
-                outlineWidth: parseInt(style.outlineWidth || "0"),
+                outlineWidth: parseFloat(style.outlineWidth || "0"),
             },
         }
     }
@@ -241,10 +211,9 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
             const info = getElementInfo(el, rootRect, pxToInX, pxToInY);
             if (!info) continue;
 
-            console.log('El: ', el);
-            console.log('Style: ', info);
-
             const isRounded = info.styles.borderRadius > 0;
+            const lineWidth = Math.max(info.styles.borderWidth, info.styles.outlineWidth || 0);
+            const showLine = lineWidth > 0;
 
             slide.addShape(isRounded ? ppt.ShapeType.roundRect : ppt.ShapeType.roundRect, {
                 x: info.x,
@@ -252,10 +221,17 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
                 w: info.w,
                 h: info.h,
                 fill: info.styles.backgroundColor !== "rgba(0, 0, 0, 0)" ? { color: info.styles.backgroundColor } : undefined,
-                line: {
-                    color: info.styles.borderColor || info.styles.outlineColor || "transparent",
-                    width: Math.max(info.styles.outlineWidth, info.styles.borderWidth),
-                },
+                ...(showLine
+                    ? {
+                        line: {
+                            color:
+                                info.styles.borderColor ||
+                                info.styles.outlineColor ||
+                                "transparent",
+                            width: lineWidth,
+                        },
+                    }
+                    : {}),
             });
 
             shapeUIDs.add(uid);
@@ -265,6 +241,12 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
             const info = getElementInfo(el, rootRect, pxToInX, pxToInY);
             if (!info.text.trim()) continue;
 
+            const fillColor = info.styles.backgroundColor;
+            const shouldApplyFill = fillColor && fillColor !== "transparent";
+
+            const lineWidth = Math.max(info.styles.borderWidth, info.styles.outlineWidth || 0);
+            const showLine = lineWidth > 0;
+
             slide.addText(info.text, {
                 x: info.x,
                 y: info.y,
@@ -272,13 +254,20 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
                 h: info.h,
                 fontSize: info.styles.fontSize || 12,
                 color: info.styles.color || "#000000",
-                fill: info.styles.backgroundColor !== "rgba(0, 0, 0, 0)" ? { color: info.styles.backgroundColor } : undefined,
+                ...(shouldApplyFill ? { fill: { color: fillColor } } : {}),
                 bold: info.styles.fontWeight === "bold" || parseInt(info.styles.fontWeight) >= 600,
                 align: info.styles.textAlign as any,
-                line: {
-                    color: info.styles.outlineColor || info.styles.borderColor || "transparent",
-                    width: Math.max(info.styles.outlineWidth, info.styles.borderWidth),
-                },
+                ...(showLine
+                    ? {
+                        line: {
+                            color:
+                                info.styles.borderColor ||
+                                info.styles.outlineColor ||
+                                "transparent",
+                            width: lineWidth,
+                        },
+                    }
+                    : {}),
                 margin: parseInt(info.styles.padding) || 0,
             });
         }
