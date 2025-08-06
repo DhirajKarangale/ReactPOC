@@ -74,10 +74,7 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
             const parsed = parse(cssColor);
             if (!parsed) return "#000000";
 
-            console.log('CSSColor: ', cssColor);
-            console.log('CSSColor: ', formatHex(parsed));
-            
-            return formatHex(parsed); 
+            return formatHex(parsed);
         } catch {
             return "#000000";
         }
@@ -244,8 +241,8 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
             const info = getElementInfo(el, rootRect, pxToInX, pxToInY);
             if (!info) continue;
 
-            // console.log('El: ', el);
-            // console.log('Style: ', info);
+            console.log('El: ', el);
+            console.log('Style: ', info);
 
             const isRounded = info.styles.borderRadius > 0;
 
@@ -256,7 +253,7 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
                 h: info.h,
                 fill: info.styles.backgroundColor !== "rgba(0, 0, 0, 0)" ? { color: info.styles.backgroundColor } : undefined,
                 line: {
-                    color: info.styles.outlineColor || info.styles.borderColor || "transparent",
+                    color: info.styles.borderColor || info.styles.outlineColor || "transparent",
                     width: Math.max(info.styles.outlineWidth, info.styles.borderWidth),
                 },
             });
