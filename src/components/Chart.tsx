@@ -17,9 +17,16 @@ const chartData = [
     { browser: "E", data: 90, fill: "#1D4ED8" },
 ];
 
+const chartMeta = {
+    chartType: "pie",
+    labels: chartData.map((d) => d.browser),
+    values: chartData.map((d) => d.data),
+    colors: chartData.map((d) => d.fill),
+};
+
 function Chart({ title }: ChartProps) {
     return (
-        <Card className="flex flex-col chart-snapshot border border-red-500">
+        <Card className="flex flex-col border border-red-500">
             <CardHeader className="items-center pb-0">
                 <CardTitle>{title}</CardTitle>
             </CardHeader>
@@ -29,7 +36,9 @@ function Chart({ title }: ChartProps) {
                     config={{}}
                     className="mx-auto aspect-square max-h-[250px]"
                 >
-                    <PieChart>
+                    <PieChart
+                        data-chart={JSON.stringify(chartMeta)}
+                        data-chart-type="pie">
                         <ChartTooltip
                             cursor={false}
                             content={<ChartTooltipContent hideLabel />}
