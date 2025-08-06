@@ -73,6 +73,14 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
                 borderRadius: parseFloat(style.borderRadius || '0'),
                 outlineColor: parseCssColorToHex(style.outlineColor),
                 outlineWidth: parseFloat(style.outlineWidth || "0"),
+                borderTopWidth: parseFloat(style.borderTopWidth || "0"),
+                borderBottomWidth: parseFloat(style.borderBottomWidth || "0"),
+                borderRightWidth: parseFloat(style.borderRightWidth || "0"),
+                borderLeftWidth: parseFloat(style.borderLeftWidth || "0"),
+                borderTopColor: parseCssColorToHex(style.borderTopColor),
+                borderBottomColor: parseCssColorToHex(style.borderBottomColor),
+                borderRightColor: parseCssColorToHex(style.borderRightColor),
+                borderLeftColor: parseCssColorToHex(style.borderLeftColor),
             },
         }
     }
@@ -246,6 +254,21 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
 
             const lineWidth = Math.max(info.styles.borderWidth, info.styles.outlineWidth || 0);
             const showLine = lineWidth > 0;
+            const barLengthShrink = 0.01;
+
+            const borderSides = {
+                top: info.styles.borderTopWidth > 0,
+                right: info.styles.borderRightWidth > 0,
+                bottom: info.styles.borderBottomWidth > 0,
+                left: info.styles.borderLeftWidth > 0,
+            };
+
+            const sideColors = {
+                top: parseCssColorToHex(info.styles.borderTopColor),
+                right: parseCssColorToHex(info.styles.borderRightColor),
+                bottom: parseCssColorToHex(info.styles.borderBottomColor),
+                left: parseCssColorToHex(info.styles.borderLeftColor),
+            };
 
             slide.addText(info.text, {
                 x: info.x,
@@ -270,6 +293,47 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
                     : {}),
                 margin: parseInt(info.styles.padding) || 0,
             });
+
+            if (borderSides.left) {
+                slide.addShape(ppt.ShapeType.roundRect, {
+                    x: info.x + barLengthShrink / 5,
+                    y: info.y + barLengthShrink / 2,
+                    w: pxToInX(info.styles.borderLeftWidth),
+                    h: info.h - barLengthShrink,
+                    fill: { color: sideColors.left },
+                    line: { color: sideColors.left, width: 0 },
+                });
+            }
+            if (borderSides.right) {
+                slide.addShape(ppt.ShapeType.roundRect, {
+                    x: info.x + info.w - info.styles.borderRightWidth,
+                    y: info.y,
+                    w: info.styles.borderRightWidth,
+                    h: info.h - barLengthShrink,
+                    fill: { color: sideColors.right },
+                    line: { color: sideColors.right, width: 0 },
+                });
+            }
+            if (borderSides.top) {
+                slide.addShape(ppt.ShapeType.roundRect, {
+                    x: info.x,
+                    y: info.y,
+                    w: info.w - barLengthShrink,
+                    h: info.styles.borderTopWidth,
+                    fill: { color: sideColors.top },
+                    line: { color: sideColors.top, width: 0 },
+                });
+            }
+            if (borderSides.bottom) {
+                slide.addShape(ppt.ShapeType.roundRect, {
+                    x: info.x,
+                    y: info.y + info.h - info.styles.borderBottomWidth,
+                    w: info.w - barLengthShrink,
+                    h: info.styles.borderBottomWidth,
+                    fill: { color: sideColors.bottom },
+                    line: { color: sideColors.bottom, width: 0 },
+                });
+            }
         }
 
         ppt.writeFile({ fileName: `${title}.pptx` })
