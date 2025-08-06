@@ -29,12 +29,13 @@ const PdfDownloader: React.FC<PdfDownloaderProps> = ({
     const [cleanedContent, setCleanedContent] = useState<string>("")
     const [title, setTitle] = useState<string>("CX Dashboard Info")
     const previewRef = useRef<HTMLDivElement>(null)
-    const [scale, setScale] = useState(1)
+    const [scale, setScale] = useState(1);
+    const bgColor = "#ffffff";
 
     const IMAGE_OPTIONS = {
         quality: 1.0,
         pixelRatio: 2,
-        backgroundColor: "#ffffff",
+        backgroundColor: bgColor,
     }
 
     useEffect(() => {
@@ -47,8 +48,16 @@ const PdfDownloader: React.FC<PdfDownloaderProps> = ({
             const computedScale = previewWidth / originalWidth
             setScale(Math.min(1, computedScale)) // Never upscale
         }
-    }, [isOpen, cleanedContent])
+    }, [isOpen, cleanedContent]);
 
+
+    const getFormattedDate = () => {
+        const now = new Date()
+        const day = String(now.getDate()).padStart(2, "0")
+        const month = String(now.getMonth() + 1).padStart(2, "0")
+        const year = now.getFullYear()
+        return `${day}/${month}/${year}`
+    }
 
     async function handleDownload() {
         if (!contentRef.current) return
@@ -68,7 +77,7 @@ const PdfDownloader: React.FC<PdfDownloaderProps> = ({
                     try {
                         const dataUrl = await toPng(chartEl as HTMLElement, {
                             cacheBust: true,
-                            backgroundColor: "#ffffff",
+                            backgroundColor: bgColor,
                         })
 
                         const img = new Image()
@@ -96,7 +105,7 @@ const PdfDownloader: React.FC<PdfDownloaderProps> = ({
             document.body.appendChild(hiddenWrapper)
 
             const finalDataUrl = await toPng(clone, {
-                backgroundColor: "#ffffff",
+                backgroundColor: bgColor,
                 cacheBust: true,
             })
 
@@ -122,21 +131,29 @@ const PdfDownloader: React.FC<PdfDownloaderProps> = ({
                 const x = (pageWidth - scaledWidth) / 2
                 const y = 50
 
-                pdf.setFillColor("#ffffff")
+                const dateStr = getFormattedDate()
+
+                pdf.setFillColor(bgColor)
                 pdf.rect(0, 0, pageWidth, pageHeight, "F")
+
                 pdf.setTextColor(0, 0, 0)
+
                 pdf.setFont("helvetica", "bold")
                 pdf.setFontSize(20)
                 pdf.text(title, pageWidth / 2, 30, { align: "center" })
+
+                pdf.setFont("helvetica", "normal")
+                pdf.setFontSize(8)
+                const margin = 3
+                pdf.text(dateStr, pageWidth - margin, pageHeight - margin, { align: "right" })
+
                 pdf.addImage(finalDataUrl, "PNG", x, y, scaledWidth, scaledHeight)
-                pdf.save("dashboard.pdf")
+                pdf.save(`${title}.pdf`)
             }
 
-            img.onerror = () => {
-                throw new Error("Image loading failed")
-            }
+            img.onerror = () => { throw new Error("Image loading failed") }
         } catch (err) {
-            console.error("Error generating PDF", err)
+            console.log("Error generating PDF", err)
         }
     }
 
