@@ -5,7 +5,9 @@ import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle } from "@/components/ui/card"
 
-import Chart from "../components/Chart"
+import ChartPie from "../components/ChartPie"
+import ChartLine from "../components/ChartLine"
+import ChartBar from "../components/ChartBar"
 import InfoBox from "../components/InfoBox"
 import PdfDownloader from "./PdfDownloader"
 import PptDownloader from "./PptDownloader"
@@ -32,16 +34,23 @@ function Dashboard() {
 
                               <div className="bg-transparent grid grid-cols-1 sm:grid-cols-2 gap-6 pt-6">
                                     <div className="chart-snapshot" data-id="chart-1">
-                                          <Chart title="Chart 1" />
+                                          <ChartPie title="PieChart 1" />
                                     </div>
 
                                     <InfoBox title="Information 1" />
-                                    <InfoBox title="Information 2" />
-                                    <InfoBox title="Information 3" />
+                                    {/* <InfoBox title="Information 2" /> */}
+                                    {/* <InfoBox title="Information 3" /> */}
+
+                                    <div className="chart-snapshot" data-id="chart-1">
+                                          <ChartLine title="LineChart 1" />
+                                    </div>
+                                    <div className="chart-snapshot" data-id="chart-1">
+                                          <ChartBar title="BarChart 1" />
+                                    </div>
                               </div>
 
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 no-print">
-                                    <Chart title="Chart 2" />
+                                    <ChartPie title="Chart 2" />
                                     <InfoBox title="Information 4" />
                               </div>
                         </div>

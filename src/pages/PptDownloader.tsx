@@ -356,14 +356,6 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
                 const chartMeta = JSON.parse(chartMetaRaw);
                 if (!chartMeta) continue;
 
-                const pptChartData = [
-                    {
-                        name: "Chart",
-                        labels: chartMeta.labels,
-                        values: chartMeta.values,
-                    },
-                ];
-
                 const rect = el.getBoundingClientRect();
 
                 const x = pxToInX(rect.left);
@@ -371,26 +363,55 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
                 const w = pxToInX(rect.width);
                 const h = pxToInY(rect.height);
 
+                let pptChartData: any[] = [];
+
+                if (chartMeta.chartType === "bar" && chartMeta.colors?.length > 0) {
+                    pptChartData = chartMeta.labels.map((label: string, i: number) => ({
+                        name: label,
+                        labels: [""],
+                        values: [chartMeta.values[i]],
+                    }));
+                }
+                else {
+                    pptChartData = [
+                        {
+                            name: "Chart",
+                            labels: chartMeta.labels,
+                            values: chartMeta.values,
+                        },
+                    ];
+                }
+
+                const chartOptions: PptxGenJS.IChartOpts = {
+                    x,
+                    y,
+                    w,
+                    h,
+                    chartColors: chartMeta.colors,
+                    showLegend: true,
+                    legendPos: "b",
+                    showValue: true,
+                    dataLabelFontSize: 8,
+                    legendFontSize: 15,
+                    legendColor: chartMeta.legendColor || "#000000",
+                    dataLabelColor: chartMeta.lableColor || "#000000",
+                    dataLabelPosition:
+                        chartMeta.chartType === "pie" || chartMeta.chartType === "doughnut"
+                            ? "outEnd"
+                            : "t",
+                    // showDataTable: true,
+                    // showLabel:true,
+                    // showPercent:true
+                    // showDataTableOutline: true,
+                    // showDataTableVertBorder: true,
+                    // showDataTableHorzBorder: true,
+                    // showDataTableKeys: true,
+                };
+
                 slide.addChart(
                     chartMeta.chartType as PptxGenJS.CHART_NAME,
                     pptChartData,
-                    {
-                        x,
-                        y,
-                        w,
-                        h,
-                        chartColors: chartMeta.colors,
-                        showLegend: true,
-                        legendPos: "b",
-                        // showLabel:true
-                        showValue: true,
-                        // showPercent:true
-                        // showDataTableOutline: true,
-                        // showDataTableVertBorder: true,
-                        // showDataTableHorzBorder: true,
-                        // showDataTableKeys: true,
-                        showDataTable: true,
-                    }
+                    chartOptions,
                 );
 
             } catch (e) {
