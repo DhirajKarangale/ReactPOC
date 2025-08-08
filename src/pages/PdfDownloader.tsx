@@ -46,7 +46,7 @@ const PdfDownloader: React.FC<PdfDownloaderProps> = ({
 
         if (originalWidth > 0 && previewWidth > 0) {
             const computedScale = previewWidth / originalWidth
-            setScale(Math.min(1, computedScale)) // Never upscale
+            setScale(Math.min(1, computedScale)) 
         }
     }, [isOpen, cleanedContent]);
 
@@ -129,7 +129,7 @@ const PdfDownloader: React.FC<PdfDownloaderProps> = ({
                 const scaledHeight = img.height * ratio
 
                 const x = (pageWidth - scaledWidth) / 2
-                const y = 50
+                const y = 40
 
                 const dateStr = getFormattedDate()
 
@@ -140,12 +140,16 @@ const PdfDownloader: React.FC<PdfDownloaderProps> = ({
 
                 pdf.setFont("helvetica", "bold")
                 pdf.setFontSize(20)
-                pdf.text(title, pageWidth / 2, 30, { align: "center" })
+                pdf.text(title, 20, 30)
 
+                pdf.setTextColor(100, 100, 100)
                 pdf.setFont("helvetica", "normal")
-                pdf.setFontSize(8)
-                const margin = 3
-                pdf.text(dateStr, pageWidth - margin, pageHeight - margin, { align: "right" })
+                pdf.setFontSize(10)
+                pdf.text(dateStr, pageWidth - 20, 30, { align: "right" })
+
+                pdf.setDrawColor(180) 
+                pdf.setLineWidth(0.5)
+                pdf.line(20, 36, pageWidth - 20, 36) 
 
                 pdf.addImage(finalDataUrl, "PNG", x, y, scaledWidth, scaledHeight)
                 pdf.save(`${title}.pdf`)
@@ -203,7 +207,7 @@ const PdfDownloader: React.FC<PdfDownloaderProps> = ({
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-5xl max-h-[95vh] overflow-hidden">
+            <DialogContent className="!w-[1000px] !max-w-[95vw] h-[90vh] max-h-[95vh] overflow-hidden">
                 <DialogHeader>
                     <DialogTitle>Download Dashboard PDF</DialogTitle>
                 </DialogHeader>

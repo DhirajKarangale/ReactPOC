@@ -490,7 +490,7 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-5xl max-h-[95vh] overflow-hidden">
+            <DialogContent className="!w-[1000px] !max-w-[95vw] h-[90vh] max-h-[95vh] overflow-hidden">
                 <DialogHeader>
                     <DialogTitle>Download Dashboard PPT</DialogTitle>
                 </DialogHeader>
