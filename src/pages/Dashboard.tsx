@@ -38,15 +38,28 @@ function Dashboard() {
                                     </div>
 
                                     <InfoBox title="Information 1" />
-                                    {/* <InfoBox title="Information 2" /> */}
-                                    {/* <InfoBox title="Information 3" /> */}
+                                    <InfoBox title="Information 2" />
+                                    <InfoBox title="Information 3" />
 
-                                    <div className="chart-snapshot" data-id="chart-1">
+                                    {/* <InfoBox title="Information 4" />
+                                    <InfoBox title="Information 5" />
+                                    <InfoBox title="Information 6" />
+
+                                    <InfoBox title="Information 7" />
+                                    <InfoBox title="Information 8" />
+                                    <InfoBox title="Information 9" />
+
+                                    <InfoBox title="Information 10" />
+                                    <InfoBox title="Information 11" />
+                                    <InfoBox title="Information 12" />
+                                    <InfoBox title="Information 13" /> */}
+
+                                    {/* <div className="chart-snapshot" data-id="chart-1">
                                           <ChartLine title="LineChart 1" />
                                     </div>
                                     <div className="chart-snapshot" data-id="chart-1">
                                           <ChartBar title="BarChart 1" />
-                                    </div>
+                                    </div> */}
                               </div>
 
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 no-print">

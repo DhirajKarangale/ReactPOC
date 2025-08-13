@@ -22,6 +22,12 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
     const previewRef = useRef<HTMLDivElement>(null)
     const toRgb = converter('rgb');
 
+    interface ComponentGroup {
+        background: ReturnType<typeof getElementInfo> | null;
+        texts: ReturnType<typeof getElementInfo>[];
+        charts: ReturnType<typeof getElementInfo>[];
+    }
+
     const parseCssColorToHex = (cssColor: string): string => {
         if (!cssColor) return "transparent";
 
@@ -116,12 +122,20 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
     }
 
     const hasVisualStyle = (style: CSSStyleDeclaration) => {
-        return (
-            style.backgroundColor && style.backgroundColor !== "rgba(0, 0, 0, 0)" ||
-            parseInt(style.borderWidth || "0") > 0 ||
-            parseInt(style.padding || "0") > 0
-        )
-    }
+        const hasBg = style.backgroundColor &&
+            style.backgroundColor !== "transparent" &&
+            style.backgroundColor !== "rgba(0, 0, 0, 0)";
+
+        const hasBorder = parseFloat(style.borderWidth || "0") > 0 &&
+            style.borderColor &&
+            style.borderColor !== "transparent" &&
+            style.borderColor !== "rgba(0, 0, 0, 0)";
+
+        const hasShadow = !!style.boxShadow && style.boxShadow !== "none";
+
+        return hasBg || hasBorder || hasShadow;
+    };
+
 
     const setupPresentation = (root: HTMLElement) => {
         const rootRect = root.getBoundingClientRect();
@@ -342,6 +356,7 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
 
     const renderCharts = (slide: PptxGenJS.Slide,
         allNodes: Element[],
+        rootRect: DOMRect,
         pxToInX: (px: number) => number,
         pxToInY: (px: number) => number) => {
 
@@ -356,13 +371,7 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
                 const chartMeta = JSON.parse(chartMetaRaw);
                 if (!chartMeta) continue;
 
-                const rect = el.getBoundingClientRect();
-
-                const x = pxToInX(rect.left);
-                const y = pxToInY(rect.top);
-                const w = pxToInX(rect.width);
-                const h = pxToInY(rect.height);
-
+                const info = getElementInfo(el as HTMLElement, rootRect, pxToInX, pxToInY);
                 let pptChartData: any[] = [];
 
                 if (chartMeta.chartType === "bar" && chartMeta.colors?.length > 0) {
@@ -383,10 +392,10 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
                 }
 
                 const chartOptions: PptxGenJS.IChartOpts = {
-                    x,
-                    y,
-                    w,
-                    h,
+                    x: info.x,
+                    y: info.y,
+                    w: info.w,
+                    h: info.h,
                     chartColors: chartMeta.colors,
                     showLegend: true,
                     legendPos: "b",
@@ -420,6 +429,185 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
         }
     }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    const collectBackgrounds = (
+        allNodes: Element[],
+        textNodes: HTMLElement[],
+        outermostWrapper: HTMLElement | null,
+        rootRect: DOMRect,
+        pxToInX: (px: number) => number,
+        pxToInY: (px: number) => number
+    ): ComponentGroup[] => {
+        const groups: ComponentGroup[] = [];
+        const shapeUIDs = new Set<string>();
+
+        const isOverlapping = (a: any, b: any) => {
+            const aLeft = a.x;
+            const aRight = a.x + a.w;
+            const aTop = a.y;
+            const aBottom = a.y + a.h;
+
+            const bLeft = b.x;
+            const bRight = b.x + b.w;
+            const bTop = b.y;
+            const bBottom = b.y + b.h;
+
+            return !(
+                aRight < bLeft ||
+                aLeft > bRight ||
+                aBottom < bTop ||
+                aTop > bBottom
+            );
+        };
+
+        for (const el of allNodes) {
+            if (!(el instanceof HTMLElement)) continue;
+            const uid = el.getAttribute("data-uid");
+
+            if (!uid || shapeUIDs.has(uid)) continue;
+            if (el.closest(".no-print") || el === outermostWrapper) continue;
+
+            const style = getComputedStyle(el);
+            if (!hasVisualStyle(style)) continue;
+
+            // const containsTextChild = textNodes.some(textEl => el.contains(textEl));
+            // if (!containsTextChild) continue;
+
+            const info = getElementInfo(el, rootRect, pxToInX, pxToInY);
+
+            const overlapsExisting = groups.some(group =>
+                group.background && isOverlapping(info, group.background)
+            );
+
+            if (overlapsExisting) continue;
+
+            groups.push({
+                background: info,
+                texts: [],
+                charts: [],
+            });
+
+            shapeUIDs.add(uid);
+        }
+
+        return groups;
+    };
+
+
+    const assignTextsToGroups = (
+        groups: ComponentGroup[],
+        textNodes: HTMLElement[],
+        rootRect: DOMRect,
+        pxToInX: (px: number) => number,
+        pxToInY: (px: number) => number
+    ) => {
+        for (const el of textNodes) {
+            const info = getElementInfo(el, rootRect, pxToInX, pxToInY);
+            if (!info.text.trim()) continue;
+
+            const targetGroup = groups.find(group => {
+                if (!group.background) return false;
+                const bg = group.background;
+
+                const bgLeft = bg.x;
+                const bgRight = bg.x + bg.w;
+                const bgTop = bg.y;
+                const bgBottom = bg.y + bg.h;
+
+                const elLeft = info.x;
+                const elRight = info.x + info.w;
+                const elTop = info.y;
+                const elBottom = info.y + info.h;
+
+                // console.log('--BG: ', bg);
+
+                return (
+                    elLeft >= bgLeft &&
+                    elRight <= bgRight &&
+                    elTop >= bgTop &&
+                    elBottom <= bgBottom
+                );
+            });
+
+            if (targetGroup) {
+                // console.log('targetGroup: ', targetGroup, ", EL: ", el);
+                targetGroup.texts.push(info);
+            }
+        }
+    };
+
+    const assignChartsToGroups = (
+        groups: ComponentGroup[],
+        allNodes: Element[],
+        rootRect: DOMRect,
+        pxToInX: (px: number) => number,
+        pxToInY: (px: number) => number
+    ) => {
+        for (const el of allNodes) {
+            if (!(el instanceof HTMLElement)) continue;
+            if (el.closest(".no-print")) continue;
+
+            const chartMetaRaw = el.getAttribute("data-chart");
+            if (!chartMetaRaw) continue;
+
+            const info = getElementInfo(el, rootRect, pxToInX, pxToInY);
+
+            const targetGroup = groups.find(group => {
+                if (!group.background) return false;
+                const bg = group.background;
+
+                const bgLeft = bg.x;
+                const bgRight = bg.x + bg.w;
+                const bgTop = bg.y;
+                const bgBottom = bg.y + bg.h;
+
+                const elLeft = info.x;
+                const elRight = info.x + info.w;
+                const elTop = info.y;
+                const elBottom = info.y + info.h;
+
+                return (
+                    elLeft >= bgLeft &&
+                    elRight <= bgRight &&
+                    elTop >= bgTop &&
+                    elBottom <= bgBottom
+                );
+            });
+
+            if (targetGroup) {
+                targetGroup.charts.push(info);
+            }
+        }
+    };
+
+
+
+
     const handleDownload = async () => {
         if (!contentRef.current) return;
 
@@ -434,11 +622,16 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
         const outermostWrapper = getCommonAncestor(textNodes);
         const allNodes = Array.from(root.querySelectorAll("*"));
 
-        renderShapes(slide, allNodes, textNodes, outermostWrapper, rootRect, pxToInX, pxToInY, ppt);
-        renderTextElements(slide, textNodes, rootRect, pxToInX, pxToInY, ppt);
-        renderCharts(slide, allNodes, pxToInX, pxToInY);
+        const groups = collectBackgrounds(allNodes, textNodes, outermostWrapper, rootRect, pxToInX, pxToInY);
+        // assignTextsToGroups(groups, textNodes, rootRect, pxToInX, pxToInY);
+        // assignChartsToGroups(groups, allNodes, rootRect, pxToInX, pxToInY);
+        console.log("Grouped Components:", groups);
 
-        ppt.writeFile({ fileName: `${title}.pptx` });
+        // renderShapes(slide, allNodes, textNodes, outermostWrapper, rootRect, pxToInX, pxToInY, ppt);
+        // renderTextElements(slide, textNodes, rootRect, pxToInX, pxToInY, ppt);
+        // renderCharts(slide, allNodes, rootRect, pxToInX, pxToInY);
+
+        // ppt.writeFile({ fileName: `${title}.pptx` });
     }
 
     const preparePreview = async () => {
