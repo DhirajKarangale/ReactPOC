@@ -96,7 +96,7 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
         ) as HTMLElement[]
 
         const uidNum = uid.split('-')[1];
-        candidates.sort((a, b) => b.querySelectorAll("*").length - a.querySelectorAll("*").length)
+        // candidates.sort((a, b) => b.querySelectorAll("*").length - a.querySelectorAll("*").length)
 
         for (const el of candidates) {
             const elUid = el.getAttribute("data-uid")?.split('-')[1];
@@ -113,12 +113,14 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
         return null
     }
 
-    const assignElementUIDs = (root: HTMLElement) => {
-        Array.from(root.querySelectorAll("*")).forEach((el, idx) => {
+    const assignElementUIDs = (allNodes: Element[]) => {
+        let idx = 0;
+        for (const el of allNodes) {
             if (el instanceof HTMLElement) {
                 el.setAttribute("data-uid", `el-${idx}`)
+                idx++;
             }
-        })
+        }
     }
 
     const hasVisualStyle = (style: CSSStyleDeclaration) => {
@@ -173,12 +175,13 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
         });
     };
 
-    const getRenderableTextNodes = (root: HTMLElement): HTMLElement[] => {
-        const allNodes = Array.from(root.querySelectorAll("*"));
+    const getRenderableTextNodes = (root: HTMLElement, allNodes: Element[]): HTMLElement[] => {
         const textNodes: HTMLElement[] = [];
         const renderedUIDs = new Set<string>();
 
         for (const el of allNodes) {
+            console.log('----------------------------');
+            console.log(el);
             if (!(el instanceof HTMLElement)) continue;
             if (el.closest(".no-print")) continue;
 
@@ -190,6 +193,7 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
             const targetUID = target?.getAttribute("data-uid");
             if (target && targetUID && !renderedUIDs.has(targetUID)) {
                 textNodes.push(target);
+                console.log('Select: ', text);
                 renderedUIDs.add(targetUID);
             }
         }
@@ -457,7 +461,6 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
 
     const collectBackgrounds = (
         allNodes: Element[],
-        textNodes: HTMLElement[],
         outermostWrapper: HTMLElement | null,
         rootRect: DOMRect,
         pxToInX: (px: number) => number,
@@ -495,9 +498,6 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
             const style = getComputedStyle(el);
             if (!hasVisualStyle(style)) continue;
 
-            // const containsTextChild = textNodes.some(textEl => el.contains(textEl));
-            // if (!containsTextChild) continue;
-
             const info = getElementInfo(el, rootRect, pxToInX, pxToInY);
 
             const overlapsExisting = groups.some(group =>
@@ -520,46 +520,51 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
 
 
     const assignTextsToGroups = (
+        textNodes: Element[],
         groups: ComponentGroup[],
-        textNodes: HTMLElement[],
         rootRect: DOMRect,
         pxToInX: (px: number) => number,
         pxToInY: (px: number) => number
     ) => {
+        const isInside = (element: any, bg: any) => {
+            const elLeft = element.x;
+            const elRight = element.x + element.w;
+            const elTop = element.y;
+            const elBottom = element.y + element.h;
+
+            const bgLeft = bg.x;
+            const bgRight = bg.x + bg.w;
+            const bgTop = bg.y;
+            const bgBottom = bg.y + bg.h;
+
+            // Must be completely inside background
+            return (
+                elLeft >= bgLeft &&
+                elRight <= bgRight &&
+                elTop >= bgTop &&
+                elBottom <= bgBottom
+            );
+        };
+
         for (const el of textNodes) {
+            if (!(el instanceof HTMLElement)) continue;
+
+            const style = getComputedStyle(el);
+            if (!hasVisualStyle(style)) continue;
+
             const info = getElementInfo(el, rootRect, pxToInX, pxToInY);
             if (!info.text.trim()) continue;
 
-            const targetGroup = groups.find(group => {
-                if (!group.background) return false;
-                const bg = group.background;
-
-                const bgLeft = bg.x;
-                const bgRight = bg.x + bg.w;
-                const bgTop = bg.y;
-                const bgBottom = bg.y + bg.h;
-
-                const elLeft = info.x;
-                const elRight = info.x + info.w;
-                const elTop = info.y;
-                const elBottom = info.y + info.h;
-
-                // console.log('--BG: ', bg);
-
-                return (
-                    elLeft >= bgLeft &&
-                    elRight <= bgRight &&
-                    elTop >= bgTop &&
-                    elBottom <= bgBottom
-                );
-            });
+            const targetGroup = groups.find(group =>
+                group.background && isInside(info, group.background)
+            );
 
             if (targetGroup) {
-                // console.log('targetGroup: ', targetGroup, ", EL: ", el);
                 targetGroup.texts.push(info);
             }
         }
     };
+
 
     const assignChartsToGroups = (
         groups: ComponentGroup[],
@@ -613,18 +618,17 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
 
         const root = contentRef.current;
         const { ppt, slide, pxToInX, pxToInY, rootRect, sizeX } = setupPresentation(root);
-
-        addTitle(slide, title, sizeX);
-
-        assignElementUIDs(root);
-
-        const textNodes = getRenderableTextNodes(root);
-        const outermostWrapper = getCommonAncestor(textNodes);
         const allNodes = Array.from(root.querySelectorAll("*"));
 
-        const groups = collectBackgrounds(allNodes, textNodes, outermostWrapper, rootRect, pxToInX, pxToInY);
-        // assignTextsToGroups(groups, textNodes, rootRect, pxToInX, pxToInY);
-        // assignChartsToGroups(groups, allNodes, rootRect, pxToInX, pxToInY);
+        addTitle(slide, title, sizeX);
+        assignElementUIDs(allNodes);
+
+        const textNodes = getRenderableTextNodes(root, allNodes);
+        const outermostWrapper = getCommonAncestor(textNodes);
+
+        const groups = collectBackgrounds(allNodes, outermostWrapper, rootRect, pxToInX, pxToInY);
+        assignTextsToGroups(textNodes, groups, rootRect, pxToInX, pxToInY);
+        assignChartsToGroups(groups, allNodes, rootRect, pxToInX, pxToInY);
         console.log("Grouped Components:", groups);
 
         // renderShapes(slide, allNodes, textNodes, outermostWrapper, rootRect, pxToInX, pxToInY, ppt);

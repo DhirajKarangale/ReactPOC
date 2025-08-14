@@ -52,7 +52,8 @@ function Dashboard() {
                                     <InfoBox title="Information 10" />
                                     <InfoBox title="Information 11" />
                                     <InfoBox title="Information 12" />
-                                    <InfoBox title="Information 13" /> */}
+                                    <InfoBox title="Information 13" />
+                                    <InfoBox title="Information 14" /> */}
 
                                     {/* <div className="chart-snapshot" data-id="chart-1">
                                           <ChartLine title="LineChart 1" />
