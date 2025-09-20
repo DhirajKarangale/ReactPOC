@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useRef, useState } from "react"
+import React, { useEffect, useRef, useState, type MutableRefObject } from "react"
 import { toPng } from "html-to-image"
 import PptxGenJS from "pptxgenjs"
 import { formatHex, parse, converter } from "culori"
@@ -10,36 +10,30 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
-interface PptDownloadProps {
+interface PptDownloaderProps {
     isOpen: boolean
     onClose: () => void
-    contentRef: React.RefObject<HTMLDivElement | null>
+    contentRef: MutableRefObject<HTMLDivElement | null>
 }
 
-const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef }) => {
-    const [title, setTitle] = useState("CX Dashboard Info")
-    const [previewImage, setPreviewImage] = useState<string | null>(null)
-    const previewRef = useRef<HTMLDivElement>(null)
+function PptDownloader({ isOpen, onClose, contentRef }: PptDownloaderProps) {
+    const [title, setTitle] = useState("PPT Title");
+    const [previewImage, setPreviewImage] = useState<any>(null);
+    const previewRef = useRef(null);
     const toRgb = converter('rgb');
 
-    interface ComponentGroup {
-        background: ReturnType<typeof getElementInfo> | null;
-        texts: ReturnType<typeof getElementInfo>[];
-        charts: ReturnType<typeof getElementInfo>[];
-    }
-
-    const parseCssColorToHex = (cssColor: string): string => {
-        if (!cssColor) return "transparent";
+    const parseColorToHex = (color: string) => {
+        if (!color) return "transparent";
 
         const isTransparent =
-            cssColor === "transparent" ||
-            cssColor === "rgba(0, 0, 0, 0)" ||
-            cssColor === "rgba(255, 255, 255, 0)";
+            color === "transparent" ||
+            color === "rgba(0, 0, 0, 0)" ||
+            color === "rgba(255, 255, 255, 0)";
 
         if (isTransparent) return "transparent";
 
         try {
-            const parsed = parse(cssColor);
+            const parsed = parse(color);
             if (!parsed) return "transparent";
 
             const rgb = toRgb(parsed);
@@ -60,60 +54,60 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
         const rect = el.getBoundingClientRect()
 
         return {
+            element: el,
             text: el.innerText || "",
             x: pxToInX(rect.left - rootRect.left),
             y: pxToInY(rect.top - rootRect.top),
             w: pxToInX(rect.width),
             h: pxToInY(rect.height),
             styles: {
-                backgroundColor: parseCssColorToHex(style.backgroundColor),
-                color: parseCssColorToHex(style.color),
+                backgroundColor: parseColorToHex(style.backgroundColor),
+                color: parseColorToHex(style.color),
                 fontSize: parseInt(style.fontSize),
                 fontWeight: style.fontWeight,
                 textAlign: style.textAlign,
-                borderColor: parseCssColorToHex(style.borderColor),
+                borderColor: parseColorToHex(style.borderColor),
                 borderWidth: parseFloat(style.borderWidth || '0'),
                 margin: style.margin,
                 padding: style.padding,
                 borderRadius: parseFloat(style.borderRadius || '0'),
-                outlineColor: parseCssColorToHex(style.outlineColor),
+                outlineColor: parseColorToHex(style.outlineColor),
                 outlineWidth: parseFloat(style.outlineWidth || "0"),
-                borderTopWidth: parseFloat(style.borderTopWidth || "0"),
-                borderBottomWidth: parseFloat(style.borderBottomWidth || "0"),
-                borderRightWidth: parseFloat(style.borderRightWidth || "0"),
-                borderLeftWidth: parseFloat(style.borderLeftWidth || "0"),
-                borderTopColor: parseCssColorToHex(style.borderTopColor),
-                borderBottomColor: parseCssColorToHex(style.borderBottomColor),
-                borderRightColor: parseCssColorToHex(style.borderRightColor),
-                borderLeftColor: parseCssColorToHex(style.borderLeftColor),
+                borderTopWidth: pxToInY(parseFloat(style.borderTopWidth || "0")),
+                borderBottomWidth: pxToInY(parseFloat(style.borderBottomWidth || "0")),
+                borderRightWidth: pxToInX(parseFloat(style.borderRightWidth || "0")),
+                borderLeftWidth: pxToInX(parseFloat(style.borderLeftWidth || "0")),
+                borderTopColor: parseColorToHex(style.borderTopColor),
+                borderBottomColor: parseColorToHex(style.borderBottomColor),
+                borderRightColor: parseColorToHex(style.borderRightColor),
+                borderLeftColor: parseColorToHex(style.borderLeftColor),
             },
         }
     }
 
     const getLowestUniqueElement = (root: HTMLElement, text: string, uid: string): HTMLElement | null => {
-        const candidates = Array.from(root.querySelectorAll("*")).filter(
-            el => el instanceof HTMLElement && el.textContent?.includes(text)
-        ) as HTMLElement[]
+        const candidates = Array.from(root.querySelectorAll<HTMLElement>("*")).filter(
+            (el): el is HTMLElement => el.textContent?.includes(text) ?? false
+        );
 
         const uidNum = uid.split('-')[1];
-        // candidates.sort((a, b) => b.querySelectorAll("*").length - a.querySelectorAll("*").length)
 
         for (const el of candidates) {
             const elUid = el.getAttribute("data-uid")?.split('-')[1];
             if (!elUid || elUid < uidNum) continue;
 
-            const children = Array.from(el.querySelectorAll("*"))
-            const hasChildWithSameText = children.some(child => child.textContent?.trim() === text.trim())
+            const children = Array.from(el.querySelectorAll<HTMLElement>("*"));
+            const hasChildWithSameText = children.some(child => child.textContent?.trim() === text.trim());
 
             if (!hasChildWithSameText) {
-                return el
+                return el;
             }
         }
 
-        return null
+        return null;
     }
 
-    const assignElementUIDs = (allNodes: Element[]) => {
+    const assignElementUIDs = (allNodes: any) => {
         let idx = 0;
         for (const el of allNodes) {
             if (el instanceof HTMLElement) {
@@ -123,7 +117,7 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
         }
     }
 
-    const hasVisualStyle = (style: CSSStyleDeclaration) => {
+    const hasVisualStyle = (style: any) => {
         const hasBg = style.backgroundColor &&
             style.backgroundColor !== "transparent" &&
             style.backgroundColor !== "rgba(0, 0, 0, 0)";
@@ -138,13 +132,13 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
         return hasBg || hasBorder || hasShadow;
     };
 
-
-    const setupPresentation = (root: HTMLElement) => {
+    const setupPresentation = (root: any) => {
         const rootRect = root.getBoundingClientRect();
         const sizeX = 14.4;
         const sizeY = 14.58;
         const rootWidth = rootRect.width;
-        const rootHeight = rootRect.height;
+        // const rootHeight = rootRect.height;
+        const rootHeight = 1862.3333740234375;
 
         const scaleX = sizeX / rootWidth;
         const scaleY = sizeY / rootHeight;
@@ -156,13 +150,10 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
         ppt.defineLayout({ name: "Custom", width: sizeX, height: sizeY });
         ppt.layout = "Custom";
 
-        const slide = ppt.addSlide();
-        slide.background = { fill: "#F5F5F5" };
-
-        return { ppt, slide, pxToInX, pxToInY, rootRect, sizeX, sizeY };
+        return { ppt, pxToInX, pxToInY, rootRect, sizeX, sizeY };
     };
 
-    const addTitle = (slide: PptxGenJS.Slide, title: string, sizeX: number) => {
+    const addTitle = (slide: any, title: any, sizeX: any) => {
         slide.addText(title, {
             x: 0,
             y: 0.3,
@@ -175,13 +166,11 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
         });
     };
 
-    const getRenderableTextNodes = (root: HTMLElement, allNodes: Element[]): HTMLElement[] => {
-        const textNodes: HTMLElement[] = [];
-        const renderedUIDs = new Set<string>();
+    const getRenderableTextNodes = (root: any, allNodes: any) => {
+        const textNodes = [];
+        const renderedUIDs = new Set();
 
         for (const el of allNodes) {
-            console.log('----------------------------');
-            console.log(el);
             if (!(el instanceof HTMLElement)) continue;
             if (el.closest(".no-print")) continue;
 
@@ -189,11 +178,10 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
             const uid = el.getAttribute("data-uid");
             if (!text || !uid || renderedUIDs.has(uid)) continue;
 
-            const target = getLowestUniqueElement(root, text, uid);
+            const target = getLowestUniqueElement(root, text, uid) as HTMLElement;
             const targetUID = target?.getAttribute("data-uid");
             if (target && targetUID && !renderedUIDs.has(targetUID)) {
                 textNodes.push(target);
-                console.log('Select: ', text);
                 renderedUIDs.add(targetUID);
             }
         }
@@ -201,273 +189,25 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
         return textNodes;
     };
 
-    const getCommonAncestor = (nodes: HTMLElement[]) => {
+    const getCommonAncestor = (nodes: any) => {
         if (nodes.length === 0) return null;
         let current = nodes[0].parentElement;
         while (current) {
-            if (nodes.every(n => current?.contains(n))) return current;
+            if (nodes.every((n: any) => current?.contains(n))) return current;
             current = current.parentElement;
         }
         return null;
     };
 
-    const renderShapes = (
-        slide: PptxGenJS.Slide,
-        allNodes: Element[],
-        textNodes: HTMLElement[],
-        outermostWrapper: HTMLElement | null,
-        rootRect: DOMRect,
-        pxToInX: (px: number) => number,
-        pxToInY: (px: number) => number,
-        ppt: PptxGenJS
-    ) => {
-        const shapeUIDs = new Set<string>();
-
-        for (const el of allNodes.reverse()) {
-            if (!(el instanceof HTMLElement)) continue;
-            const uid = el.getAttribute("data-uid");
-            if (!uid || shapeUIDs.has(uid)) continue;
-            if (el.closest(".no-print") || el === outermostWrapper) continue;
-
-            const style = getComputedStyle(el);
-
-            if (!hasVisualStyle(style)) continue;
-
-            const containsTextChild = textNodes.some(textEl => el.contains(textEl));
-            if (!containsTextChild) continue;
-
-            const info = getElementInfo(el, rootRect, pxToInX, pxToInY);
-            const isRounded = info.styles.borderRadius > 0;
-            const lineWidth = Math.max(info.styles.borderWidth, info.styles.outlineWidth || 0);
-            const showLine = lineWidth > 0;
-
-            slide.addShape(isRounded ? ppt.ShapeType.roundRect : ppt.ShapeType.roundRect, {
-                x: info.x,
-                y: info.y,
-                w: info.w,
-                h: info.h,
-                fill: info.styles.backgroundColor !== "transparent" ? { color: info.styles.backgroundColor } : undefined,
-                ...(showLine
-                    ? {
-                        line: {
-                            color: info.styles.borderColor || info.styles.outlineColor || "transparent",
-                            width: lineWidth,
-                        },
-                    }
-                    : {}),
-            });
-
-            shapeUIDs.add(uid);
-        }
-    };
-
-    const renderTextElements = (
-        slide: PptxGenJS.Slide,
-        textNodes: HTMLElement[],
-        rootRect: DOMRect,
-        pxToInX: (px: number) => number,
-        pxToInY: (px: number) => number,
-        ppt: PptxGenJS
-    ) => {
-        const barLengthShrink = 0.02;
-
-        for (const el of textNodes) {
-            const info = getElementInfo(el, rootRect, pxToInX, pxToInY);
-            if (!info.text.trim()) continue;
-
-            const fillColor = info.styles.backgroundColor;
-            const shouldApplyFill = fillColor && fillColor !== "transparent";
-            const lineWidth = Math.max(info.styles.borderWidth, info.styles.outlineWidth || 0);
-            const showLine = lineWidth > 0;
-
-            const borderSides = {
-                top: info.styles.borderTopWidth > 0,
-                right: info.styles.borderRightWidth > 0,
-                bottom: info.styles.borderBottomWidth > 0,
-                left: info.styles.borderLeftWidth > 0,
-            };
-
-            const sideColors = {
-                top: parseCssColorToHex(info.styles.borderTopColor),
-                right: parseCssColorToHex(info.styles.borderRightColor),
-                bottom: parseCssColorToHex(info.styles.borderBottomColor),
-                left: parseCssColorToHex(info.styles.borderLeftColor),
-            };
-
-            slide.addText(info.text, {
-                x: info.x,
-                y: info.y,
-                w: info.w,
-                h: info.h,
-                fontSize: info.styles.fontSize || 12,
-                color: info.styles.color || "#000000",
-                ...(shouldApplyFill ? { fill: { color: fillColor } } : {}),
-                bold: info.styles.fontWeight === "bold" || parseInt(info.styles.fontWeight) >= 600,
-                align: info.styles.textAlign as any,
-                ...(showLine
-                    ? {
-                        line: {
-                            color: info.styles.borderColor || info.styles.outlineColor || "transparent",
-                            width: lineWidth,
-                        },
-                    }
-                    : {}),
-                margin: parseInt(info.styles.padding) || 0,
-            });
-
-            if (borderSides.left) {
-                slide.addShape(ppt.ShapeType.roundRect, {
-                    x: info.x + barLengthShrink / 5,
-                    y: info.y + barLengthShrink / 2,
-                    w: pxToInX(info.styles.borderLeftWidth),
-                    h: info.h - barLengthShrink,
-                    fill: { color: sideColors.left },
-                    line: { color: sideColors.left, width: 0 },
-                });
-            }
-            if (borderSides.right) {
-                slide.addShape(ppt.ShapeType.roundRect, {
-                    x: info.x + info.w - info.styles.borderRightWidth,
-                    y: info.y,
-                    w: info.styles.borderRightWidth,
-                    h: info.h - barLengthShrink,
-                    fill: { color: sideColors.right },
-                    line: { color: sideColors.right, width: 0 },
-                });
-            }
-            if (borderSides.top) {
-                slide.addShape(ppt.ShapeType.roundRect, {
-                    x: info.x,
-                    y: info.y,
-                    w: info.w - barLengthShrink,
-                    h: info.styles.borderTopWidth,
-                    fill: { color: sideColors.top },
-                    line: { color: sideColors.top, width: 0 },
-                });
-            }
-            if (borderSides.bottom) {
-                slide.addShape(ppt.ShapeType.roundRect, {
-                    x: info.x,
-                    y: info.y + info.h - info.styles.borderBottomWidth,
-                    w: info.w - barLengthShrink,
-                    h: info.styles.borderBottomWidth,
-                    fill: { color: sideColors.bottom },
-                    line: { color: sideColors.bottom, width: 0 },
-                });
-            }
-        }
-    };
-
-    const renderCharts = (slide: PptxGenJS.Slide,
-        allNodes: Element[],
-        rootRect: DOMRect,
-        pxToInX: (px: number) => number,
-        pxToInY: (px: number) => number) => {
-
-        for (const el of allNodes) {
-            if (el.closest(".no-print")) continue;
-
-            const chartMetaRaw = el.getAttribute("data-chart");
-            if (!chartMetaRaw) continue;
-            if (!chartMetaRaw.trim().startsWith("{") || !chartMetaRaw.trim().endsWith("}")) continue;
-
-            try {
-                const chartMeta = JSON.parse(chartMetaRaw);
-                if (!chartMeta) continue;
-
-                const info = getElementInfo(el as HTMLElement, rootRect, pxToInX, pxToInY);
-                let pptChartData: any[] = [];
-
-                if (chartMeta.chartType === "bar" && chartMeta.colors?.length > 0) {
-                    pptChartData = chartMeta.labels.map((label: string, i: number) => ({
-                        name: label,
-                        labels: [""],
-                        values: [chartMeta.values[i]],
-                    }));
-                }
-                else {
-                    pptChartData = [
-                        {
-                            name: "Chart",
-                            labels: chartMeta.labels,
-                            values: chartMeta.values,
-                        },
-                    ];
-                }
-
-                const chartOptions: PptxGenJS.IChartOpts = {
-                    x: info.x,
-                    y: info.y,
-                    w: info.w,
-                    h: info.h,
-                    chartColors: chartMeta.colors,
-                    showLegend: true,
-                    legendPos: "b",
-                    showValue: true,
-                    dataLabelFontSize: 8,
-                    legendFontSize: 15,
-                    legendColor: chartMeta.legendColor || "#000000",
-                    dataLabelColor: chartMeta.lableColor || "#000000",
-                    dataLabelPosition:
-                        chartMeta.chartType === "pie" || chartMeta.chartType === "doughnut"
-                            ? "outEnd"
-                            : "t",
-                    // showDataTable: true,
-                    // showLabel:true,
-                    // showPercent:true
-                    // showDataTableOutline: true,
-                    // showDataTableVertBorder: true,
-                    // showDataTableHorzBorder: true,
-                    // showDataTableKeys: true,
-                };
-
-                slide.addChart(
-                    chartMeta.chartType as PptxGenJS.CHART_NAME,
-                    pptChartData,
-                    chartOptions,
-                );
-
-            } catch (e) {
-                console.log("Invalid chart metadata", e);
-            }
-        }
-    }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     const collectBackgrounds = (
-        allNodes: Element[],
-        outermostWrapper: HTMLElement | null,
-        rootRect: DOMRect,
-        pxToInX: (px: number) => number,
-        pxToInY: (px: number) => number
-    ): ComponentGroup[] => {
-        const groups: ComponentGroup[] = [];
-        const shapeUIDs = new Set<string>();
+        allNodes: any,
+        outermostWrapper: any,
+        rootRect: any,
+        pxToInX: any,
+        pxToInY: any
+    ) => {
+        const groups: any = [];
+        const shapeUIDs = new Set();
 
         const isOverlapping = (a: any, b: any) => {
             const aLeft = a.x;
@@ -500,7 +240,7 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
 
             const info = getElementInfo(el, rootRect, pxToInX, pxToInY);
 
-            const overlapsExisting = groups.some(group =>
+            const overlapsExisting = groups.some((group: any) =>
                 group.background && isOverlapping(info, group.background)
             );
 
@@ -518,13 +258,12 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
         return groups;
     };
 
-
     const assignTextsToGroups = (
-        textNodes: Element[],
-        groups: ComponentGroup[],
-        rootRect: DOMRect,
-        pxToInX: (px: number) => number,
-        pxToInY: (px: number) => number
+        textNodes: any,
+        groups: any,
+        rootRect: any,
+        pxToInX: any,
+        pxToInY: any
     ) => {
         const isInside = (element: any, bg: any) => {
             const elLeft = element.x;
@@ -537,7 +276,6 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
             const bgTop = bg.y;
             const bgBottom = bg.y + bg.h;
 
-            // Must be completely inside background
             return (
                 elLeft >= bgLeft &&
                 elRight <= bgRight &&
@@ -549,13 +287,10 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
         for (const el of textNodes) {
             if (!(el instanceof HTMLElement)) continue;
 
-            const style = getComputedStyle(el);
-            if (!hasVisualStyle(style)) continue;
-
             const info = getElementInfo(el, rootRect, pxToInX, pxToInY);
             if (!info.text.trim()) continue;
 
-            const targetGroup = groups.find(group =>
+            const targetGroup = groups.find((group: any) =>
                 group.background && isInside(info, group.background)
             );
 
@@ -565,44 +300,43 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
         }
     };
 
-
     const assignChartsToGroups = (
-        groups: ComponentGroup[],
-        allNodes: Element[],
-        rootRect: DOMRect,
-        pxToInX: (px: number) => number,
-        pxToInY: (px: number) => number
+        allNodes: any,
+        groups: any,
+        rootRect: any,
+        pxToInX: any,
+        pxToInY: any
     ) => {
+        const isInside = (element: any, bg: any) => {
+            const elLeft = element.x;
+            const elRight = element.x + element.w;
+            const elTop = element.y;
+            const elBottom = element.y + element.h;
+
+            const bgLeft = bg.x;
+            const bgRight = bg.x + bg.w;
+            const bgTop = bg.y;
+            const bgBottom = bg.y + bg.h;
+
+            return (
+                elLeft >= bgLeft &&
+                elRight <= bgRight &&
+                elTop >= bgTop &&
+                elBottom <= bgBottom
+            );
+        };
+
         for (const el of allNodes) {
-            if (!(el instanceof HTMLElement)) continue;
             if (el.closest(".no-print")) continue;
 
             const chartMetaRaw = el.getAttribute("data-chart");
             if (!chartMetaRaw) continue;
+            if (!chartMetaRaw.trim().startsWith("{") || !chartMetaRaw.trim().endsWith("}")) continue;
 
             const info = getElementInfo(el, rootRect, pxToInX, pxToInY);
-
-            const targetGroup = groups.find(group => {
-                if (!group.background) return false;
-                const bg = group.background;
-
-                const bgLeft = bg.x;
-                const bgRight = bg.x + bg.w;
-                const bgTop = bg.y;
-                const bgBottom = bg.y + bg.h;
-
-                const elLeft = info.x;
-                const elRight = info.x + info.w;
-                const elTop = info.y;
-                const elBottom = info.y + info.h;
-
-                return (
-                    elLeft >= bgLeft &&
-                    elRight <= bgRight &&
-                    elTop >= bgTop &&
-                    elBottom <= bgBottom
-                );
-            });
+            const targetGroup = groups.find((group: any) =>
+                group.background && isInside(info, group.background)
+            );
 
             if (targetGroup) {
                 targetGroup.charts.push(info);
@@ -610,17 +344,306 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
         }
     };
 
+    const assignPosition = (groups: any, slideHeight: any) => {
+        let slide = 1;
+        let offsetY = 0;
 
+        for (const group of groups) {
+            const groupHeight = group.background.h + group.background.y;
+            if (groupHeight > slideHeight * slide) {
+                slide++;
 
+                const newPos1 = slideHeight * (slide - 1);
+                const newGPos = group.background.y - newPos1;
+                offsetY = 0.1 - newGPos;
+            }
+
+            group.slide = slide;
+
+            if (slide > 1) {
+                const newPos = (slideHeight * (slide - 1)) - offsetY;
+                group.background.y -= newPos;
+
+                for (const text of group.texts) {
+                    text.y -= newPos;
+                }
+
+                for (const chart of group.charts) {
+                    chart.y = newPos;
+                }
+            }
+        }
+    }
+
+    const assignPosition2 = (groups: any, slideHeight: any, slideWidth: any) => {
+        const scaleFactor = 1.5;
+
+        let slide = 1;
+        let positionInSlide = 0;
+
+        for (const group of groups) {
+            const oldX = group.background.x;
+            const oldY = group.background.y;
+
+            const centerOldX = oldX + group.background.w / 2;
+            const centerOldY = oldY + group.background.h / 2;
+            group.background.w *= scaleFactor;
+            group.background.h *= scaleFactor;
+            group.background.x = centerOldX - group.background.w / 2;
+            group.background.y = centerOldY - group.background.h / 2;
+
+            for (const text of group.texts) {
+                const centerX = oldX + group.background.w / (2 * scaleFactor);
+                const centerY = oldY + group.background.h / (2 * scaleFactor);
+                text.w *= scaleFactor;
+                text.h *= scaleFactor;
+                text.x = centerX + (text.x - oldX - group.background.w / (2 * scaleFactor)) * scaleFactor;
+                text.y = centerY + (text.y - oldY - group.background.h / (2 * scaleFactor)) * scaleFactor;
+                text.styles.fontSize *= scaleFactor;
+            }
+
+            for (const chart of group.charts) {
+                const centerX = oldX + group.background.w / (2 * scaleFactor);
+                const centerY = oldY + group.background.h / (2 * scaleFactor);
+                chart.w *= scaleFactor;
+                chart.h *= scaleFactor;
+                chart.x = centerX + (chart.x - oldX - group.background.w / (2 * scaleFactor)) * scaleFactor;
+                chart.y = centerY + (chart.y - oldY - group.background.h / (2 * scaleFactor)) * scaleFactor;
+            }
+
+            group.slide = slide;
+            const centerXPos = (slideWidth - group.background.w) / 2;
+            let newY;
+            const margin = 0.5;
+            if (positionInSlide === 0) {
+                newY = margin;
+                if (slide == 1) newY = 1.5;
+            } else {
+                newY = slideHeight - group.background.h - margin;
+            }
+
+            const dx = centerXPos - group.background.x;
+            const dy = newY - group.background.y;
+
+            group.background.x += dx;
+            group.background.y += dy;
+
+            for (const text of group.texts) {
+                text.x += dx;
+                text.y += dy;
+            }
+            for (const chart of group.charts) {
+                chart.x += dx;
+                chart.y += dy;
+            }
+
+            positionInSlide++;
+            if (positionInSlide > 1) {
+                slide++;
+                positionInSlide = 0;
+            }
+        }
+    };
+
+    const createSlides = (ppt: any, groups: any) => {
+        const mxSlides = Math.max(...groups.map((g: any) => g.slide));
+        const slides = [];
+
+        for (let i = 1; i <= mxSlides; i++) {
+            const slide = ppt.addSlide();
+            slide.background = { fill: "#F5F5F5" };
+            slides.push(slide);
+        }
+
+        return slides;
+    }
+
+    const addBackgrounds = (groups: any, slides: any, ppt: any) => {
+        for (const group of groups) {
+            const background = group.background;
+            const isRounded = background.styles.borderRadius > 0;
+            const lineWidth = Math.max(background.styles.borderWidth, background.styles.outlineWidth || 0);
+            const showLine = lineWidth > 0;
+
+            slides[group.slide - 1].addShape(isRounded ? ppt.ShapeType.roundRect : ppt.ShapeType.roundRect, {
+                x: background.x,
+                y: background.y,
+                w: background.w,
+                h: background.h,
+                fill: background.styles.backgroundColor !== "transparent" ? { color: background.styles.backgroundColor } : undefined,
+                ...(showLine
+                    ? {
+                        line: {
+                            color: background.styles.borderColor || background.styles.outlineColor || "transparent",
+                            width: lineWidth,
+                        },
+                    }
+                    : {}),
+            });
+        }
+    }
+
+    const addTexts = (groups: any, slides: any, ppt: any) => {
+        const barLengthShrink = 0.03;
+
+        for (const group of groups) {
+            for (const info of group.texts) {
+                if (!info.text.trim()) continue;
+
+                const fillColor = info.styles.backgroundColor;
+                const shouldApplyFill = fillColor && fillColor !== "transparent";
+                const lineWidth = Math.max(info.styles.borderWidth, info.styles.outlineWidth || 0);
+                const showLine = lineWidth > 0;
+
+                const borderSides = {
+                    top: info.styles.borderTopWidth > 0,
+                    right: info.styles.borderRightWidth > 0,
+                    bottom: info.styles.borderBottomWidth > 0,
+                    left: info.styles.borderLeftWidth > 0,
+                };
+
+                const sideColors = {
+                    top: parseColorToHex(info.styles.borderTopColor),
+                    right: parseColorToHex(info.styles.borderRightColor),
+                    bottom: parseColorToHex(info.styles.borderBottomColor),
+                    left: parseColorToHex(info.styles.borderLeftColor),
+                };
+
+                slides[group.slide - 1].addText(info.text, {
+                    x: info.x,
+                    y: info.y,
+                    w: info.w,
+                    h: info.h,
+                    fontSize: info.styles.fontSize || 12,
+                    color: info.styles.color || "#000000",
+                    ...(shouldApplyFill ? { fill: { color: fillColor } } : {}),
+                    bold: info.styles.fontWeight === "bold" || parseInt(info.styles.fontWeight) >= 600,
+                    align: info.styles.textAlign,
+                    ...(showLine
+                        ? {
+                            line: {
+                                color: info.styles.borderColor || info.styles.outlineColor || "transparent",
+                                width: lineWidth,
+                            },
+                        }
+                        : {}),
+                    margin: parseInt(info.styles.padding) || 0,
+                });
+
+                if (borderSides.left) {
+                    slides[group.slide - 1].addShape(ppt.ShapeType.roundRect, {
+                        x: info.x + barLengthShrink / 5,
+                        y: info.y + barLengthShrink / 2,
+                        w: info.styles.borderLeftWidth,
+                        h: info.h - barLengthShrink,
+                        fill: { color: sideColors.left },
+                        line: { color: sideColors.left, width: 0 },
+                    });
+                }
+                if (borderSides.right) {
+                    slides[group.slide - 1].addShape(ppt.ShapeType.roundRect, {
+                        x: info.x + info.w - info.styles.borderRightWidth,
+                        y: info.y,
+                        w: info.styles.borderRightWidth,
+                        h: info.h - barLengthShrink,
+                        fill: { color: sideColors.right },
+                        line: { color: sideColors.right, width: 0 },
+                    });
+                }
+                if (borderSides.top) {
+                    slides[group.slide - 1].addShape(ppt.ShapeType.roundRect, {
+                        x: info.x,
+                        y: info.y,
+                        w: info.w - barLengthShrink,
+                        h: info.styles.borderTopWidth,
+                        fill: { color: sideColors.top },
+                        line: { color: sideColors.top, width: 0 },
+                    });
+                }
+                if (borderSides.bottom) {
+                    slides[group.slide - 1].addShape(ppt.ShapeType.roundRect, {
+                        x: info.x,
+                        y: info.y + info.h - info.styles.borderBottomWidth,
+                        w: info.w - barLengthShrink,
+                        h: info.styles.borderBottomWidth,
+                        fill: { color: sideColors.bottom },
+                        line: { color: sideColors.bottom, width: 0 },
+                    });
+                }
+
+            }
+        }
+    }
+
+    const addCharts = (groups: any, slides: any) => {
+        for (const group of groups) {
+            for (const chart of group.charts) {
+                let chartNode = chart.element;
+
+                const chartMetaRaw = chartNode.getAttribute("data-chart");
+                if (!chartMetaRaw) continue;
+                if (!chartMetaRaw.trim().startsWith("{") || !chartMetaRaw.trim().endsWith("}")) continue;
+
+                try {
+                    const chartMeta = JSON.parse(chartMetaRaw);
+                    if (!chartMeta) continue;
+
+                    let pptChartData = [];
+
+                    if (chartMeta.chartType === "bar" && chartMeta.colors?.length > 0) {
+                        pptChartData = chartMeta.labels.map((label: any, i: any) => ({
+                            name: label,
+                            labels: [""],
+                            values: [chartMeta.values[i]],
+                        }));
+                    }
+                    else {
+                        pptChartData = [
+                            {
+                                name: "Chart",
+                                labels: chartMeta.labels,
+                                values: chartMeta.values,
+                            },
+                        ];
+                    }
+
+                    const chartOptions = {
+                        x: chart.x,
+                        y: chart.y,
+                        w: chart.w,
+                        h: chart.h,
+                        chartColors: chartMeta.colors,
+                        showLegend: true,
+                        legendPos: "b",
+                        showValue: true,
+                        dataLabelFontSize: 8,
+                        legendFontSize: 15,
+                        legendColor: chartMeta.legendColor || "#000000",
+                        dataLabelColor: chartMeta.lableColor || "#000000",
+                        dataLabelPosition:
+                            chartMeta.chartType === "pie" || chartMeta.chartType === "doughnut" ? "outEnd" : "t",
+                    };
+
+                    slides[group.slide - 1].addChart(
+                        chartMeta.chartType,
+                        pptChartData,
+                        chartOptions,
+                    );
+
+                } catch (e) {
+                    console.log("Invalid chart metadata", e);
+                }
+            }
+        }
+    }
 
     const handleDownload = async () => {
         if (!contentRef.current) return;
 
         const root = contentRef.current;
-        const { ppt, slide, pxToInX, pxToInY, rootRect, sizeX } = setupPresentation(root);
+        const { ppt, pxToInX, pxToInY, rootRect, sizeX, sizeY } = setupPresentation(root);
         const allNodes = Array.from(root.querySelectorAll("*"));
 
-        addTitle(slide, title, sizeX);
         assignElementUIDs(allNodes);
 
         const textNodes = getRenderableTextNodes(root, allNodes);
@@ -628,14 +651,18 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
 
         const groups = collectBackgrounds(allNodes, outermostWrapper, rootRect, pxToInX, pxToInY);
         assignTextsToGroups(textNodes, groups, rootRect, pxToInX, pxToInY);
-        assignChartsToGroups(groups, allNodes, rootRect, pxToInX, pxToInY);
-        console.log("Grouped Components:", groups);
+        assignChartsToGroups(allNodes, groups, rootRect, pxToInX, pxToInY);
+        assignPosition(groups, sizeY);
+        // assignPosition2(groups, sizeY, sizeX);
 
-        // renderShapes(slide, allNodes, textNodes, outermostWrapper, rootRect, pxToInX, pxToInY, ppt);
-        // renderTextElements(slide, textNodes, rootRect, pxToInX, pxToInY, ppt);
-        // renderCharts(slide, allNodes, rootRect, pxToInX, pxToInY);
+        const slides = createSlides(ppt, groups);
+        addTitle(slides[0], title, sizeX);
 
-        // ppt.writeFile({ fileName: `${title}.pptx` });
+        addBackgrounds(groups, slides, ppt);
+        addTexts(groups, slides, ppt);
+        addCharts(groups, slides);
+
+        ppt.writeFile({ fileName: `${title}.pptx` });
     }
 
     const preparePreview = async () => {
@@ -650,7 +677,7 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
 
         await Promise.all(
             Array.from(charts).map(async (chart, i) => {
-                const cloneTarget = clonedCharts[i] as HTMLElement | undefined
+                const cloneTarget = clonedCharts[i]
                 if (!cloneTarget) return
 
                 try {
@@ -723,4 +750,4 @@ const PptDownloader: React.FC<PptDownloadProps> = ({ isOpen, onClose, contentRef
     )
 }
 
-export default PptDownloader
+export default React.memo(PptDownloader);

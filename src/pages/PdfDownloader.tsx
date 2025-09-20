@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState, useRef } from "react"
+import React, { useEffect, useState, useRef, type MutableRefObject } from "react"
 import { toPng } from "html-to-image"
 import jsPDF from "jspdf"
 
@@ -18,19 +18,15 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 interface PdfDownloaderProps {
     isOpen: boolean
     onClose: () => void
-    contentRef: React.RefObject<HTMLDivElement | null>
+    contentRef: MutableRefObject<HTMLDivElement | null>
 }
 
-const PdfDownloader: React.FC<PdfDownloaderProps> = ({
-    isOpen,
-    onClose,
-    contentRef,
-}) => {
+function PdfDownloader({ isOpen, onClose, contentRef }: PdfDownloaderProps) {
     const [cleanedContent, setCleanedContent] = useState<string>("")
-    const [title, setTitle] = useState<string>("CX Dashboard Info")
-    const previewRef = useRef<HTMLDivElement>(null)
-    const [scale, setScale] = useState(1);
-    const bgColor = "#ffffff";
+    const [title, setTitle] = useState<string>("PDF Title")
+    const previewRef = useRef<HTMLDivElement | null>(null)
+    const [scale, setScale] = useState<number>(1)
+    const bgColor = "#ffffff"
 
     const IMAGE_OPTIONS = {
         quality: 1.0,
@@ -46,7 +42,7 @@ const PdfDownloader: React.FC<PdfDownloaderProps> = ({
 
         if (originalWidth > 0 && previewWidth > 0) {
             const computedScale = previewWidth / originalWidth
-            setScale(Math.min(1, computedScale)) 
+            setScale(Math.min(1, computedScale))
         }
     }, [isOpen, cleanedContent]);
 
@@ -63,17 +59,17 @@ const PdfDownloader: React.FC<PdfDownloaderProps> = ({
         if (!contentRef.current) return
 
         try {
-            const originalNode = contentRef.current
-            const clone = originalNode.cloneNode(true) as HTMLElement
+            const originalNode = contentRef.current;
+            const clone = originalNode.cloneNode(true) as HTMLElement;
 
-            clone.querySelectorAll(".no-print").forEach((el) => el.remove())
+            clone.querySelectorAll(".no-print").forEach((el) => el.remove());
 
-            const originalCharts = originalNode.querySelectorAll(".chart-snapshot")
-            const clonedCharts = clone.querySelectorAll(".chart-snapshot")
+            const originalCharts = originalNode.querySelectorAll(".chart-snapshot");
+            const clonedCharts = clone.querySelectorAll(".chart-snapshot");
 
             await Promise.all(
                 Array.from(originalCharts).map(async (chartEl, i) => {
-                    const cloneEl = clonedCharts[i] as HTMLElement
+                    const cloneEl = clonedCharts[i];
                     try {
                         const dataUrl = await toPng(chartEl as HTMLElement, {
                             cacheBust: true,
@@ -140,19 +136,19 @@ const PdfDownloader: React.FC<PdfDownloaderProps> = ({
 
                 pdf.setFont("helvetica", "bold")
                 pdf.setFontSize(20)
-                pdf.text(title, 20, 30)
+                pdf.text(title.trim(), 20, 30)
 
                 pdf.setTextColor(100, 100, 100)
                 pdf.setFont("helvetica", "normal")
                 pdf.setFontSize(10)
                 pdf.text(dateStr, pageWidth - 20, 30, { align: "right" })
 
-                pdf.setDrawColor(180) 
+                pdf.setDrawColor(180)
                 pdf.setLineWidth(0.5)
-                pdf.line(20, 36, pageWidth - 20, 36) 
+                pdf.line(20, 36, pageWidth - 20, 36)
 
                 pdf.addImage(finalDataUrl, "PNG", x, y, scaledWidth, scaledHeight)
-                pdf.save(`${title}.pdf`)
+                pdf.save(`${title.trim()}.pdf`)
             }
 
             img.onerror = () => { throw new Error("Image loading failed") }
@@ -166,13 +162,15 @@ const PdfDownloader: React.FC<PdfDownloaderProps> = ({
         let isMounted = true
 
         const generatePreview = async () => {
-            const source = contentRef.current!
-            const clonedNode = source.cloneNode(true) as HTMLElement
+            const source = contentRef.current;
+            if (!source) return;
 
-            clonedNode.querySelectorAll(".no-print").forEach((el) => el.remove())
+            const clonedNode = source.cloneNode(true) as HTMLElement;
 
-            const originalCharts = source.querySelectorAll(".chart-snapshot")
-            const clonedCharts = clonedNode.querySelectorAll(".chart-snapshot")
+            clonedNode.querySelectorAll(".no-print").forEach((el) => el.remove());
+
+            const originalCharts = source.querySelectorAll(".chart-snapshot");
+            const clonedCharts = clonedNode.querySelectorAll(".chart-snapshot");
 
             await Promise.all(
                 Array.from(originalCharts).map(async (chartEl, index) => {
@@ -207,7 +205,7 @@ const PdfDownloader: React.FC<PdfDownloaderProps> = ({
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="!w-[1000px] !max-w-[95vw] h-[90vh] max-h-[95vh] overflow-hidden">
+            <DialogContent className="!w-[1000px] !max-w-[95vw] max-h-[95vh] overflow-hidden">
                 <DialogHeader>
                     <DialogTitle>Download Dashboard PDF</DialogTitle>
                 </DialogHeader>
@@ -240,7 +238,7 @@ const PdfDownloader: React.FC<PdfDownloaderProps> = ({
 
                 </div>
 
-                <DialogFooter className="gap-2 sm:justify-between pt-4">
+                <DialogFooter className="gap-2 sm:justify-between pt-2">
                     <Button variant="outline" onClick={onClose}>
                         Cancel
                     </Button>
@@ -251,4 +249,4 @@ const PdfDownloader: React.FC<PdfDownloaderProps> = ({
     )
 }
 
-export default PdfDownloader
+export default React.memo(PdfDownloader);

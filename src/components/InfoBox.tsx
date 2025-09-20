@@ -2,11 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
-interface InfoBoxProps {
-    title: string;
-}
-
-export function InfoBox({ title }: InfoBoxProps) {
+export function InfoBox({ title }: { title: string }) {
     const items = [
         "Lorem ipsum dolor sit amet consectetur adipisicing elit. Consequatur, harum ex.",
         "Lorem ipsum dolor sit amet, consectetur adipisicing elit. Error, delectus.",

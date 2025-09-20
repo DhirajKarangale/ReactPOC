@@ -21,10 +21,6 @@ import {
     ChartTooltipContent
 } from "@/components/ui/chart"
 
-interface ChartProps {
-    title: string;
-}
-
 const chartData = [
     { label: "A", data: 275, fill: "#93C5FD" },
     { label: "B", data: 200, fill: "#60A5FA" },
@@ -42,7 +38,7 @@ const chartMeta = {
     lableColor: '#1D4ED8',
 }
 
-function ChartLine({ title }: ChartProps) {
+function ChartLine({ title }: { title: string }) {
     return (
         <Card className="flex flex-col">
             <CardHeader className="items-center pb-0">

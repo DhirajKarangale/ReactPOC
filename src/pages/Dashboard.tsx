@@ -13,7 +13,7 @@ import PdfDownloader from "./PdfDownloader"
 import PptDownloader from "./PptDownloader"
 
 function Dashboard() {
-      const printRef = useRef<HTMLDivElement>(null)
+      const printRef = useRef(null)
       const [showPdfModal, setShowPdfModal] = useState(false)
       const [showPptModal, setShowPptModal] = useState(false)
 
@@ -34,33 +34,18 @@ function Dashboard() {
 
                               <div className="bg-transparent grid grid-cols-1 sm:grid-cols-2 gap-6 pt-6">
                                     <div className="chart-snapshot" data-id="chart-1">
-                                          <ChartPie title="PieChart 1" />
+                                          <ChartPie title="Chart Pie" />
                                     </div>
 
-                                    <InfoBox title="Information 1" />
-                                    <InfoBox title="Information 2" />
-                                    <InfoBox title="Information 3" />
-
-                                    {/* <InfoBox title="Information 4" />
-                                    <InfoBox title="Information 5" />
-                                    <InfoBox title="Information 6" />
-
-                                    <InfoBox title="Information 7" />
-                                    <InfoBox title="Information 8" />
-                                    <InfoBox title="Information 9" />
-
-                                    <InfoBox title="Information 10" />
-                                    <InfoBox title="Information 11" />
-                                    <InfoBox title="Information 12" />
-                                    <InfoBox title="Information 13" />
-                                    <InfoBox title="Information 14" /> */}
-
-                                    {/* <div className="chart-snapshot" data-id="chart-1">
-                                          <ChartLine title="LineChart 1" />
-                                    </div>
                                     <div className="chart-snapshot" data-id="chart-1">
-                                          <ChartBar title="BarChart 1" />
-                                    </div> */}
+                                          <ChartLine title="Line Chart" />
+                                    </div>
+
+                                    <div className="chart-snapshot" data-id="chart-1">
+                                          <ChartBar title="Bar Chart" />
+                                    </div>
+                                    
+                                    <InfoBox title="Information" />
                               </div>
 
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 no-print">
@@ -85,4 +70,4 @@ function Dashboard() {
       )
 }
 
-export default Dashboard
+export default Dashboard;
