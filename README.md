@@ -28,6 +28,7 @@ A POC for exporting React components directly into **PowerPoint (PPTX)** slides 
 📌 **Features:**
 - Convert charts, text, and styled components into slides
 - Support for background, borders, padding, and text alignment
+- Exported PPT is **fully editable** in PowerPoint
 - Easily extendable for multi-slide exports
 
 ---
@@ -39,6 +40,12 @@ Integration of [shadcn/ui](https://ui.shadcn.com/) — a beautiful, customizable
 - Consistent styling with Tailwind
 - Easily extendable component set
 - Modern UI best practices
+
+---
+
+## 🌐 Live Demo
+Check out the live demo here:  
+👉 [React POC Live](https://react-poc-fawn.vercel.app/)
 
 ---
 
